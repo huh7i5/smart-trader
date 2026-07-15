@@ -1,0 +1,14 @@
+{
+  "api_key": "YOUR_BINANCE_API_KEY",
+  "api_secret": "YOUR_BINANCE_API_SECRET",
+  "proxy": "",
+  "risk_per_trade_pct": 10,
+  "max_cash_deploy_pct": 70,
+  "min_cash_reserve_pct": 30,
+  "default_symbols": [
+    "BTC/USDT",
+    "SOL/USDT",
+    "LINK/USDT",
+    "DOGE/USDT"
+  ]
+}
