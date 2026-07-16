@@ -102,22 +102,20 @@ For long-term accumulation, use a fixed schedule regardless of price:
 
 ---
 
-## Compound Return Projections
+## Realistic Return Expectations
 
-Starting with $1,000, achieving 10% per successful trade:
+> [!CAUTION]
+> **There is no guaranteed return in trading.** The projections below are illustrative only and assume a disciplined system with proper risk management. Past backtest results do NOT guarantee future performance.
 
-| # Trades | Capital | Total Gain | Time (est.) |
-|:---:|:---:|:---:|:---:|
-| 0 | $1,000 | $0 | Start |
-| 5 | $1,610 | +$610 | ~2 months |
-| 10 | $2,594 | +$1,594 | ~4 months |
-| 15 | $4,177 | +$3,177 | ~6 months |
-| 20 | $6,727 | +$5,727 | ~8 months |
-| 25 | $10,835 | +$9,835 | ~10 months |
-| 30 | $17,449 | +$16,449 | ~12 months |
+### Scenario Analysis (Starting Capital: $1,000, Trading for 12 Months)
 
-> [!WARNING]
-> These projections assume every trade is profitable at exactly 10%. In reality, you will have losing trades. A realistic win rate of 55-60% with proper risk management should still yield significant gains over time.
+| Scenario | Win Rate | Avg Win | Avg Loss | Trades/Month | Estimated 12-Month Return |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Conservative (Our System)** | 55% | +8% | -4% | 3-4 | +15% to +35% |
+| **Moderate** | 60% | +10% | -5% | 4-6 | +25% to +50% |
+| **Aggressive** | 50% | +15% | -8% | 6-8 | -10% to +40% (high variance) |
+
+**Key insight**: Our WFA backtested strategy achieved **+31.83% ROI** over 3.5 years with a max drawdown of only **6.70%**. This is a realistic benchmark — not a fantasy of winning every trade.
 
 ---
 

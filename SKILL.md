@@ -90,14 +90,17 @@ Check the economic calendar and sector news for upcoming volatility triggers:
 
 Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 
-### Decision Matrix
+### Decision Matrix (All 8 Combinations)
 
 | ① Smart Money | ② Retail | ③ Macro | Decision |
 |:---:|:---:|:---:|:---|
 | 🟢 | 🟢 | 🟢 | ✅ Execute trade |
 | 🟢 | 🟢 | 🔴 | ⏸️ Wait for event to pass |
 | 🟢 | 🔴 | 🟢 | ✅ Execute (retail panic = opportunity) |
+| 🟢 | 🔴 | 🔴 | ⏸️ Wait for event to pass (retail panic + macro risk) |
 | 🔴 | 🟢 | 🟢 | ⏸️ Wait for smart money confirmation |
+| 🔴 | 🟢 | 🔴 | ❌ Do not trade (smart money bearish + macro risk) |
+| 🔴 | 🔴 | 🟢 | ❌ Do not trade (smart money + retail both bearish) |
 | 🔴 | 🔴 | 🔴 | ❌ Absolutely do not trade |
 
 ## Integrated Sentiment & Momentum Models
@@ -129,6 +132,7 @@ For complete backtest evidence and parameter details, see [references/integrated
 4. **Cap each trade at 6-12% of capital** — Maximum $50-$100 per single trade for a $1,000 account. Spread entries across multiple tranches.
 5. **Always maintain 30%+ cash reserve** — Cash is ammunition. Without it, you can't capitalize on crashes. Never go all-in.
 6. **Never override the Pre-Trade Checklist verdict (One-Red-Stop Rule)** — If Smart Money or Retail Flow shows red (🔴 CAUTION), do NOT buy under any circumstances. Hype does not beat actual flow.
+   - **Exception — Shield (Baseline DCA) mode only**: The weekly small-amount baseline DCA (see [baseline_booster_strategy.md](references/baseline_booster_strategy.md)) is exempt from this rule because its purpose is to guarantee minimum accumulation regardless of market conditions. The Booster (Spear) mode is **never** exempt.
 
 ## User Behavioral Awareness
 
@@ -159,6 +163,23 @@ Before any trade decision, run the automated 3-point check:
 
 ```bash
 python ${SKILL_DIR}/scripts/pre_trade_checklist.py --symbol BTC/USDT
+```
+
+### Step 2.5 · Live News Search (Mandatory)
+
+**The script alone is NOT sufficient.** The AI must use `search_web` to check for sector-specific news from the past 48 hours. This is especially critical for:
+- **bStocks** (DRAMB, NVDAB, GOOGLB): Search for earnings, analyst downgrades, competitor IPOs, trade policy changes.
+- **Sector coins** (SOL ecosystem, AI tokens): Search for protocol exploits, token unlocks, regulatory actions.
+- **BTC/ETH**: Search for ETF flow data, exchange hacks, stablecoin depegs.
+
+If any material negative news is found, override the script's Macro PASS to 🔴 CAUTION.
+
+### Step 2.75 · Run Conviction Score (Optional)
+
+If the checklist passes (🟢🟢🟢), optionally run the conviction scorer for a star rating:
+
+```bash
+python ${SKILL_DIR}/scripts/conviction_score.py --symbol BTC
 ```
 
 ### Step 3 · Analyze Fund Flows
@@ -208,10 +229,16 @@ python ${SKILL_DIR}/scripts/check_portfolio.py
 | `${SKILL_DIR}/scripts/check_prices.py` | Real-time price monitoring |
 | `${SKILL_DIR}/scripts/check_fund_flow.py` | Short-term fund flow analysis |
 | `${SKILL_DIR}/scripts/pre_trade_checklist.py` | Automated 3-point pre-trade check |
+| `${SKILL_DIR}/scripts/conviction_score.py` | Multi-factor conviction star rating |
 | `${SKILL_DIR}/scripts/buy_market.py` | Execute market buy orders |
 | `${SKILL_DIR}/scripts/buy_limit.py` | Place limit buy orders |
 | `${SKILL_DIR}/scripts/sell_market.py` | Execute market sell orders |
 | `${SKILL_DIR}/scripts/cancel_order.py` | Cancel open orders |
+| `${SKILL_DIR}/../core/stop_loss.py` | Place conditional stop-loss limit orders |
+
+> [!WARNING]
+> ## Legacy Scripts Warning
+> The `spot_gems/daily_check.py` script produces automated `!! stop_loss SELL` and `++ dca BUY` signals based on pure mathematical formulas (ATR trailing stop, percentage drawdown). **These signals must NEVER be directly executed.** They must be filtered through the Pre-Trade Checklist (Step 2) and Live News Search (Step 2.5) before any action is taken. The `daily_check.py` signals are useful as *alerts* to draw your attention, but the final decision authority belongs to the 3-Point Checklist + News Search pipeline.
 
 ## Output Format
 

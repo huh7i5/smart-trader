@@ -27,8 +27,8 @@ To solve the conflict between **high precision (low drawdown)** and **sufficient
                                                       Scales size dynamically (0.5x - 3.0x)
 ```
 
-1.  **The Shield (Baseline DCA):** Executes weekly on a fixed schedule regardless of checklist filters (unless extreme black swan halts are active). This guarantees steady accumulation of core assets.
-2.  **The Spear (Checklist Booster):** Executes dynamically when market capitulations occur, using our optimized WFA parameters to place heavy buy orders at deep cycle bottoms.
+1.  **The Shield (Baseline DCA):** Executes weekly on a fixed schedule regardless of checklist filters (unless extreme black swan halts are active). This guarantees steady accumulation of core assets. **This mode is explicitly exempt from Rule 6 (One-Red-Stop)** — see SKILL.md for the rationale.
+2.  **The Spear (Checklist Booster):** Executes dynamically when market capitulations occur, using our optimized WFA parameters to place heavy buy orders at deep cycle bottoms. **This mode is NEVER exempt from Rule 6** — all 3 checklist lights must be green (🟢🟢🟢) before the Spear fires.
 
 ---
 
