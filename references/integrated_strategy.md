@@ -98,9 +98,10 @@ We swept:
 *   `require_fng_m3` (F&G filter): `[20, 25, 35, 50]`
 *   `use_vol_decline` (Volatility contraction constraint): `[True, False]`
 
-**Optimal Configuration found:**  
+**Optimal Configuration found (in-sample):**  
 `require_fng_m3 = 50`, `use_vol_decline = False`.
 *   **Rationale:** In the initial run, enforcing `vol_decline` (requiring Bollinger Band width to contract while the lower band was breached) resulted in **0 trades**. Volatility naturally expands when prices crash below bands. Disabling the `vol_decline` constraint while allowing trades up to F&G 50 generated 2 high-quality entries during market drops, yielding a **+57.48% Deployed ROI**.
+*   **Live Deployment Override:** For live deployment, `REQUIRE_FNG_M3` was conservatively narrowed from the optimizer's **50** to **35** (see Section 7). This reduces the buy window to only high-fear environments, sacrificing some in-sample entries to protect against overfitting to a small sample of 2 trades. All downstream documents (SKILL.md, backtest scripts) use the conservative value of **35**.
 
 ---
 
@@ -125,9 +126,9 @@ graph TD
 
 ### Why the One-Red-Stop Rule is Mathematically Superior
 When we relax the checklist protection for Model 2 and Model 3:
-1.  **Deteriorating Average Cost:** The average cost price climbs significantly from **$49,047.81** to **$52,159.77** (an increase of **+$3,111.96 per BTC**).
-2.  **Reduced ROI:** Deployed ROI falls from **24.14%** to **32.01%**.
-3.  **Increased Drawdown:** Maximum Drawdown climbs from **6.44%** to **7.01%**.
+1.  **Deteriorating Average Cost:** The average cost price climbs significantly from **$49,047.81** (Enforced) to **$52,159.77** (Relaxed) — an increase of **+$3,111.96 per BTC**.
+2.  **Reduced ROI:** Deployed ROI falls from **32.01%** (Enforced) to **24.14%** (Relaxed).
+3.  **Increased Drawdown:** Maximum Drawdown climbs from **6.44%** (Enforced) to **7.01%** (Relaxed).
 
 ### The Mathematical Explanation
 Tactical buy indicators (touching the lower Bollinger Band or crossing back on RSI) trigger frequently during major downward trends. During a structural downtrend (such as mid-2024 or early 2026), the price hits the lower Bollinger Band repeatedly.

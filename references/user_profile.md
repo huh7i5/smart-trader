@@ -84,7 +84,9 @@ This is the most common query. The response should always include:
 ```
 Step 1: Run pre_trade_checklist.py for the target symbol
 Step 2: If ANY indicator is 🔴 → STOP. Do NOT recommend buying.
-        (One-Red-Stop Rule is ABSOLUTE. No exceptions for hype.)
+         (One-Red-Stop Rule is ABSOLUTE for active/booster trades.
+          No exceptions for hype. The only exemption is Shield
+          (Baseline DCA) mode — see SKILL.md Rule 6.)
 Step 3: If all 🟢 → Run conviction_score.py for star rating
 Step 4: Calculate position size (6-12% of total account)
 Step 5: Check if buying raises or lowers average cost → inform user

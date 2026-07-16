@@ -96,12 +96,14 @@ Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 |:---:|:---:|:---:|:---|
 | 🟢 | 🟢 | 🟢 | ✅ Execute trade |
 | 🟢 | 🟢 | 🔴 | ⏸️ Wait for event to pass |
-| 🟢 | 🔴 | 🟢 | ✅ Execute (retail panic = opportunity) |
+| 🟢 | 🔴 | 🟢 | ✅ Execute (retail panic = opportunity)* |
 | 🟢 | 🔴 | 🔴 | ⏸️ Wait for event to pass (retail panic + macro risk) |
 | 🔴 | 🟢 | 🟢 | ⏸️ Wait for smart money confirmation |
 | 🔴 | 🟢 | 🔴 | ❌ Do not trade (smart money bearish + macro risk) |
 | 🔴 | 🔴 | 🟢 | ❌ Do not trade (smart money + retail both bearish) |
 | 🔴 | 🔴 | 🔴 | ❌ Absolutely do not trade |
+
+> **\*** **bStock caveat for Row 3 (🟢🔴🟢):** For bStocks (DRAMB, NVDAB, GOOGLB), retail selling may reflect informed company/sector-specific news rather than irrational panic. Always verify Step 2.5 (Live News Search) before treating bStock retail selling as a buy opportunity.
 
 ## Integrated Sentiment & Momentum Models
 
@@ -235,6 +237,7 @@ python ${SKILL_DIR}/scripts/check_portfolio.py
 | `${SKILL_DIR}/scripts/sell_market.py` | Execute market sell orders |
 | `${SKILL_DIR}/scripts/cancel_order.py` | Cancel open orders |
 | `${SKILL_DIR}/../core/stop_loss.py` | Place conditional stop-loss limit orders |
+| `${SKILL_DIR}/../spot_gems/execute_dca_advanced.py` | Advanced DCA execution with ATR limit spacing (Shield+Spear) |
 
 > [!WARNING]
 > ## Legacy Scripts Warning

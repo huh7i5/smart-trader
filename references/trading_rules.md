@@ -103,6 +103,8 @@ Conservative: $1,776 × 0.06 = $106.56 per trade
 
 **The Rule**: If the 3-Point Pre-Trade Checklist returns a red warning (🔴 CAUTION) on either Smart Money or Retail Flow, do NOT buy or add positions under any circumstances. The verdict is final.
 
+**Exception — Shield (Baseline DCA) mode only**: The weekly small-amount baseline DCA is exempt from this rule because its purpose is to guarantee minimum accumulation regardless of market conditions. This exemption applies ONLY to the Shield mode, never to the Booster (Spear) mode or any discretionary trade. See [baseline_booster_strategy.md](baseline_booster_strategy.md) for details.
+
 **Why it exists**: Hype and good news (like earnings beats or CPI drops) create FOMO. Our emotional brains tell us "it's guaranteed to pump, let's bypass the checklist just this once." It is almost always a trap. Smart Money order book depth and actual taker flow show what big money is *doing*, while news only shows what they want you to *think*.
 
 **The math**:
@@ -139,6 +141,6 @@ Conservative: $1,776 × 0.06 = $106.56 per trade
 
 ## When to Break the Rules
 
-**Never.**
+**Never** — with one documented exception: the Shield (Baseline DCA) exemption to Rule 6, which exists solely to prevent zero-accumulation during prolonged bear markets. This exemption is explicitly codified in SKILL.md and baseline_booster_strategy.md, not a spontaneous override.
 
-If you find yourself rationalizing why "this time is different," that's your emotional brain trying to override your rational brain. Follow the rules mechanically. That's the whole point.
+If you find yourself rationalizing why "this time is different" for any other rule, that's your emotional brain trying to override your rational brain. Follow the rules mechanically. That's the whole point.
