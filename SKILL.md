@@ -81,11 +81,12 @@ Run: `python ${SKILL_DIR}/scripts/check_fund_flow.py --hours 6`
 
 ### ③ Macro Events
 
-Check the economic calendar for upcoming volatility triggers:
+Check the economic calendar and sector news for upcoming volatility triggers:
 
 - **Within 24 hours**: CPI, FOMC, jobs data → DO NOT TRADE
 - **Within 48 hours**: Earnings, IPOs → PROCEED WITH CAUTION
 - **Clear calendar**: SAFE TO TRADE
+- **Live News Check (Mandatory)**: Running the script is NOT enough for bStocks (GOOGLB, NVDAB, DRAMB) or specific sector coins (e.g. AI, SOL ecosystem). The AI **must** use the `search_web` tool to search for sector news, company earnings, or regulatory updates from the past 48 hours. Any critical negative news counts as a 🔴 CAUTION, overriding a script-based PASS.
 
 Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 
