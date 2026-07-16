@@ -46,6 +46,7 @@ A disciplined, data-driven trading system for cryptocurrency and bStock (Binance
 | [references/user_profile.md](references/user_profile.md) | **Always read first** — User's trading personality, habits, FOMO triggers, order preferences, and communication style |
 | [references/integrated_strategy.md](references/integrated_strategy.md) | User wants to understand or optimize the integrated Sentiment & Momentum strategy (Model 1/2/3 parameters, backtest results) |
 | [references/wfa_backtest_report.md](references/wfa_backtest_report.md) | User wants to inspect the true out-of-sample Walk-Forward Analysis (WFA) results and overfitting decay analysis |
+| [references/baseline_booster_strategy.md](references/baseline_booster_strategy.md) | User wants to combine baseline DCA (never miss trend) with checklist-enforced dynamic booster buying |
 | [references/trading_rules.md](references/trading_rules.md) | User asks about trading discipline, rules, or risk management |
 | [references/position_sizing.md](references/position_sizing.md) | User asks about how much to invest, batch sizing, or DCA planning |
 | [references/smart_money_signals.md](references/smart_money_signals.md) | User asks about smart money, whale activity, or fund flow interpretation |
