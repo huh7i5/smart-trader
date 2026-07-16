@@ -44,6 +44,7 @@ A disciplined, data-driven trading system for cryptocurrency and bStock (Binance
 | File | Open when |
 |------|-----------|
 | [references/user_profile.md](references/user_profile.md) | **Always read first** — User's trading personality, habits, FOMO triggers, order preferences, and communication style |
+| [references/integrated_strategy.md](references/integrated_strategy.md) | User wants to understand or optimize the integrated Sentiment & Momentum strategy (Model 1/2/3 parameters, backtest results) |
 | [references/trading_rules.md](references/trading_rules.md) | User asks about trading discipline, rules, or risk management |
 | [references/position_sizing.md](references/position_sizing.md) | User asks about how much to invest, batch sizing, or DCA planning |
 | [references/smart_money_signals.md](references/smart_money_signals.md) | User asks about smart money, whale activity, or fund flow interpretation |
@@ -95,6 +96,27 @@ Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 | 🟢 | 🔴 | 🟢 | ✅ Execute (retail panic = opportunity) |
 | 🔴 | 🟢 | 🟢 | ⏸️ Wait for smart money confirmation |
 | 🔴 | 🔴 | 🔴 | ❌ Absolutely do not trade |
+
+## Integrated Sentiment & Momentum Models
+
+To optimize entry prices and capital efficiency, the system integrates three execution models. **All models are bound by the One-Red-Stop (Checklist) Rule and only execute when the Pre-Trade Checklist is fully Green (🟢🟢🟢).**
+
+### Model 1: Sentiment-Weighted DCA
+*   **Purpose**: Dynamically scale purchase sizes based on market fear/euphoria.
+*   **Logic**: Scales up purchases up to 3.0x base size when F&G <= 15 (Extreme Fear) and RSI <= 25 (Extreme Oversold). Scales down to 0.5x when market shows greed.
+*   **Optimized Parameters**: `FNG_LOW = 15`, `FNG_HIGH = 30`, `RSI_LOW = 25`, `RSI_HIGH = 40`.
+
+### Model 2: Momentum Sniper (Trigger)
+*   **Purpose**: Capture bottom inflections while avoiding catching falling knives.
+*   **Logic**: Triggers a standard buy only when Checklist is Green **AND** Daily/4h RSI crosses back above 30 from oversold, or a bullish divergence is confirmed on price and RSI.
+*   **Optimized Parameters**: `RSI_CROSS_TH = 30`, `RSI_DIV_LIMIT = 35`.
+
+### Model 3: Volatility Dip Buyer (Mean Reversion)
+*   **Purpose**: Buy extreme capitulation wicks at key historical support zones.
+*   **Logic**: Triggers a volatility-scaled purchase when price touches the lower Bollinger Band during high fear (F&G <= 35).
+*   **Optimized Parameters**: `REQUIRE_FNG_M3 = 35`, `USE_VOL_DECLINE = False` (volatility contraction is not required during high-fear band breaches).
+
+For complete backtest evidence and parameter details, see [references/integrated_strategy.md](references/integrated_strategy.md).
 
 ## Trading Discipline (6 Iron Rules)
 
