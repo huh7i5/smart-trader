@@ -1,5 +1,6 @@
+Ôªø# -*- coding: utf-8 -*-
 """
-core/buy_market.py ‚Ä?Execute a market buy order
+core/buy_market.py Èà•?Execute a market buy order
 Usage: python core/buy_market.py SYMBOL AMOUNT_USDT
 Example: python core/buy_market.py BTC 50
 """
@@ -71,7 +72,7 @@ def buy_market(symbol: str, cost_usdt: float):
     filled_qty = float(order.get("filled", 0) or qty)
 
     print(f"\n{'=' * 60}")
-    print(f"  ‚ú?MARKET BUY COMPLETE")
+    print(f"  ÈâÅ?MARKET BUY COMPLETE")
     print(f"{'=' * 60}")
     print(f"  Order ID:  {order.get('id', '?')}")
     print(f"  Status:    {order.get('status', '?')}")

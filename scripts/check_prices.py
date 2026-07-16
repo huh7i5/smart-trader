@@ -1,5 +1,6 @@
+﻿# -*- coding: utf-8 -*-
 """
-core/check_prices.py �?Real-time price monitoring for tracked assets
+core/check_prices.py 鈥?Real-time price monitoring for tracked assets
 Usage: python core/check_prices.py [SYMBOL1 SYMBOL2 ...]
 Default symbols: BTC SOL LINK DOGE DRAMB NVDAB GOOGLB
 """

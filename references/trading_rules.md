@@ -96,7 +96,20 @@ Conservative: $1,776 × 0.06 = $106.56 per trade
 **When to increase cash reserve above 30%**:
 - Before major macro events (CPI, FOMC) → increase to 40-50%
 - When Fear & Greed Index shows "Extreme Greed" → increase to 40%
-- When your positions are all at profit → take partial profits to rebuild cash
+
+---
+
+## Rule 6: Never Override the Pre-Trade Checklist Verdict (One-Red-Stop Rule)
+
+**The Rule**: If the 3-Point Pre-Trade Checklist returns a red warning (🔴 CAUTION) on either Smart Money or Retail Flow, do NOT buy or add positions under any circumstances. The verdict is final.
+
+**Why it exists**: Hype and good news (like earnings beats or CPI drops) create FOMO. Our emotional brains tell us "it's guaranteed to pump, let's bypass the checklist just this once." It is almost always a trap. Smart Money order book depth and actual taker flow show what big money is *doing*, while news only shows what they want you to *think*.
+
+**The math**:
+- A major company reports blowout earnings → Retail buys at the open due to hype.
+- Smart Money check shows: `🔴 Sellers dominate (0.33x Bid/Ask ratio)`.
+- If you override the rule and buy: You buy the peak and immediately face a -2% to -5% "Sell the News" dump as institutions distribute their bags to retail.
+- If you obey the rule: You stay in cash and wait for the selling pressure to exhaust, saving capital.
 
 ---
 

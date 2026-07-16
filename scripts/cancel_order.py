@@ -1,5 +1,6 @@
+Ôªø# -*- coding: utf-8 -*-
 """
-core/cancel_order.py ‚Ä?Cancel open orders
+core/cancel_order.py Èà•?Cancel open orders
 Usage: python core/cancel_order.py ORDER_ID SYMBOL
        python core/cancel_order.py --all           (cancel all open orders)
 Example: python core/cancel_order.py 64333741291 BTC/USDT
@@ -45,7 +46,7 @@ def cancel_order(order_id: str, symbol: str):
     result = ex.cancel_order(order_id, sym)
 
     print(f"\n{'=' * 60}")
-    print(f"  ‚ú?ORDER CANCELLED")
+    print(f"  ÈâÅ?ORDER CANCELLED")
     print(f"{'=' * 60}")
     print(f"  Order ID: {order_id}")
     print(f"  Symbol:   {sym}")
@@ -66,9 +67,9 @@ def cancel_all_orders():
     for o in open_orders:
         try:
             ex.cancel_order(o["id"], o["symbol"])
-            print(f"  ‚ú?Cancelled: {o['symbol']} {o['side']} @ {o.get('price', '?')} (ID: {o['id']})")
+            print(f"  ÈâÅ?Cancelled: {o['symbol']} {o['side']} @ {o.get('price', '?')} (ID: {o['id']})")
         except Exception as e:
-            print(f"  ‚ù?Failed to cancel {o['id']}: {e}")
+            print(f"  ÈâÇ?Failed to cancel {o['id']}: {e}")
 
     print(f"\nDone. Cancelled {len(open_orders)} order(s).")
 

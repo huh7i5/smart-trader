@@ -1,19 +1,20 @@
+﻿# -*- coding: utf-8 -*-
 """
-Conviction Score — 把"感觉"量化成 0-10 分
+Conviction Score 鈥?鎶?鎰熻"閲忓寲鎴?0-10 鍒?
 
-分数决定仓位大小：
-  0-3 分：不买
-  4-5 分：小买（$30-50）
-  6-7 分：标准买（$80-100）
-  8-10分：加码（$120-150）
+鍒嗘暟鍐冲畾浠撲綅澶у皬锛?
+  0-3 鍒嗭細涓嶄拱
+  4-5 鍒嗭細灏忎拱锛?30-50锛?
+  6-7 鍒嗭細鏍囧噯涔帮紙$80-100锛?
+  8-10鍒嗭細鍔犵爜锛?120-150锛?
 
-六个因子，每个 0-10 分，加权平均：
-  ① 回撤深度（从近期高点跌了多少）  权重 25%
-  ② 支撑位距离（离关键均线多远）    权重 20%
-  ③ 趋势方向（周线级别）            权重 15%
-  ④ 资金流信号（买卖量比）          权重 20%
-  ⑤ 波动率环境（是不是极端波动）    权重 10%
-  ⑥ 恐慌程度（连续下跌天数）        权重 10%
+鍏釜鍥犲瓙锛屾瘡涓?0-10 鍒嗭紝鍔犳潈骞冲潎锛?
+  鈶?鍥炴挙娣卞害锛堜粠杩戞湡楂樼偣璺屼簡澶氬皯锛? 鏉冮噸 25%
+  鈶?鏀拺浣嶈窛绂伙紙绂诲叧閿潎绾垮杩滐級    鏉冮噸 20%
+  鈶?瓒嬪娍鏂瑰悜锛堝懆绾跨骇鍒級            鏉冮噸 15%
+  鈶?璧勯噾娴佷俊鍙凤紙涔板崠閲忔瘮锛?         鏉冮噸 20%
+  鈶?娉㈠姩鐜囩幆澧冿紙鏄笉鏄瀬绔尝鍔級    鏉冮噸 10%
+  鈶?鎭愭厡绋嬪害锛堣繛缁笅璺屽ぉ鏁帮級        鏉冮噸 10%
 """
 import csv, sys, io, math, argparse, datetime
 from pathlib import Path
@@ -85,14 +86,14 @@ def sma(data, period, key="c"):
 
 
 def score_drawdown(data, lookback=30):
-    """① 回撤深度：从近期高点跌了多少？跌得多 = 分高（机会大）"""
+    """鈶?鍥炴挙娣卞害锛氫粠杩戞湡楂樼偣璺屼簡澶氬皯锛熻穼寰楀 = 鍒嗛珮锛堟満浼氬ぇ锛?""
     if len(data) < lookback:
         return 5.0, "data insufficient"
     recent_high = max(d["h"] for d in data[-lookback:])
     current = data[-1]["c"]
     dd_pct = (recent_high - current) / recent_high * 100
 
-    # 没跌 → 0分, 跌5% → 4分, 跌10% → 7分, 跌20%+ → 10分
+    # 娌¤穼 鈫?0鍒? 璺?% 鈫?4鍒? 璺?0% 鈫?7鍒? 璺?0%+ 鈫?10鍒?
     if dd_pct <= 1:
         score = 1.0
     elif dd_pct <= 3:
@@ -110,7 +111,7 @@ def score_drawdown(data, lookback=30):
 
 
 def score_support(data):
-    """② 支撑位：当前价格相对于 50 日均线的位置。在均线下方 = 分高"""
+    """鈶?鏀拺浣嶏細褰撳墠浠锋牸鐩稿浜?50 鏃ュ潎绾跨殑浣嶇疆銆傚湪鍧囩嚎涓嬫柟 = 鍒嗛珮"""
     ma50 = sma(data, 50)
     ma20 = sma(data, 20)
     if ma50 is None:
@@ -118,7 +119,7 @@ def score_support(data):
     current = data[-1]["c"]
     dist_pct = (current - ma50) / ma50 * 100
 
-    # 在 MA50 上方很远 → 低分, 刚好在 MA50 附近 → 中分, 在下方 → 高分
+    # 鍦?MA50 涓婃柟寰堣繙 鈫?浣庡垎, 鍒氬ソ鍦?MA50 闄勮繎 鈫?涓垎, 鍦ㄤ笅鏂?鈫?楂樺垎
     if dist_pct > 10:
         score = 1.0
     elif dist_pct > 5:
@@ -137,68 +138,68 @@ def score_support(data):
 
 
 def score_trend(data):
-    """③ 周线趋势：7 天涨跌幅。微涨最好（上升趋势），暴涨则过热"""
+    """鈶?鍛ㄧ嚎瓒嬪娍锛? 澶╂定璺屽箙銆傚井娑ㄦ渶濂斤紙涓婂崌瓒嬪娍锛夛紝鏆存定鍒欒繃鐑?""
     if len(data) < 7:
         return 5.0, "insufficient"
     week_change = (data[-1]["c"] - data[-7]["c"]) / data[-7]["c"] * 100
 
     if week_change < -10:
-        score = 6.0  # 暴跌，可能有机会但有风险
+        score = 6.0  # 鏆磋穼锛屽彲鑳芥湁鏈轰細浣嗘湁椋庨櫓
     elif week_change < -5:
-        score = 7.0  # 大跌，机会开始出现
+        score = 7.0  # 澶ц穼锛屾満浼氬紑濮嬪嚭鐜?
     elif week_change < -2:
-        score = 8.0  # 温和下跌，好的买入区
+        score = 8.0  # 娓╁拰涓嬭穼锛屽ソ鐨勪拱鍏ュ尯
     elif week_change < 0:
-        score = 7.0  # 小跌
+        score = 7.0  # 灏忚穼
     elif week_change < 3:
-        score = 6.0  # 微涨，健康趋势
+        score = 6.0  # 寰定锛屽仴搴疯秼鍔?
     elif week_change < 5:
-        score = 4.0  # 涨不少了
+        score = 4.0  # 娑ㄤ笉灏戜簡
     elif week_change < 8:
-        score = 2.0  # 涨太多，小心追高
+        score = 2.0  # 娑ㄥお澶氾紝灏忓績杩介珮
     else:
-        score = 0.0  # 暴涨，绝对不追
+        score = 0.0  # 鏆存定锛岀粷瀵逛笉杩?
 
     return score, f"7d change {week_change:+.1f}%"
 
 
 def score_volume(data):
-    """④ 资金流信号：最近 3 天的买卖压力（用 K 线估算）"""
+    """鈶?璧勯噾娴佷俊鍙凤細鏈€杩?3 澶╃殑涔板崠鍘嬪姏锛堢敤 K 绾夸及绠楋級"""
     if len(data) < 14:
         return 5.0, "insufficient"
 
-    # 最近 3 天的平均买方力量
+    # 鏈€杩?3 澶╃殑骞冲潎涔版柟鍔涢噺
     recent_buy_pressure = 0
     for d in data[-3:]:
         rng = d["h"] - d["l"]
         if rng > 0:
             recent_buy_pressure += (d["c"] - d["l"]) / rng
-    recent_buy_pressure /= 3  # 0-1, >0.5 = 买方主导
+    recent_buy_pressure /= 3  # 0-1, >0.5 = 涔版柟涓诲
 
-    # 最近 3 天 vs 14 天平均成交量
+    # 鏈€杩?3 澶?vs 14 澶╁钩鍧囨垚浜ら噺
     recent_vol = sum(d["v"] for d in data[-3:]) / 3
     avg_vol = sum(d["v"] for d in data[-14:]) / 14
     vol_ratio = recent_vol / avg_vol if avg_vol > 0 else 1.0
 
-    # 买方主导 + 放量 = 高分
-    # 卖方主导 + 缩量 = 中分（卖方耗尽）
-    # 卖方主导 + 放量 = 低分（恐慌抛售中）
+    # 涔版柟涓诲 + 鏀鹃噺 = 楂樺垎
+    # 鍗栨柟涓诲 + 缂╅噺 = 涓垎锛堝崠鏂硅€楀敖锛?
+    # 鍗栨柟涓诲 + 鏀鹃噺 = 浣庡垎锛堟亹鎱屾姏鍞腑锛?
     if recent_buy_pressure > 0.6 and vol_ratio > 1.2:
-        score = 9.0  # 放量上攻
+        score = 9.0  # 鏀鹃噺涓婃敾
     elif recent_buy_pressure > 0.5:
-        score = 7.0  # 买方主导
+        score = 7.0  # 涔版柟涓诲
     elif recent_buy_pressure < 0.4 and vol_ratio < 0.8:
-        score = 6.0  # 缩量下跌 = 卖盘耗尽（反转信号）
+        score = 6.0  # 缂╅噺涓嬭穼 = 鍗栫洏鑰楀敖锛堝弽杞俊鍙凤級
     elif recent_buy_pressure < 0.4 and vol_ratio > 1.5:
-        score = 3.0  # 放量暴跌，还没企稳
+        score = 3.0  # 鏀鹃噺鏆磋穼锛岃繕娌′紒绋?
     else:
-        score = 5.0  # 中性
+        score = 5.0  # 涓€?
 
     return score, f"buy_pressure={recent_buy_pressure:.2f}, vol_ratio={vol_ratio:.1f}x"
 
 
 def score_volatility(data):
-    """⑤ 波动率环境：极端波动时不宜开仓"""
+    """鈶?娉㈠姩鐜囩幆澧冿細鏋佺娉㈠姩鏃朵笉瀹滃紑浠?""
     if len(data) < 14:
         return 5.0, "insufficient"
 
@@ -207,25 +208,25 @@ def score_volatility(data):
     ratio = today_range / atr_14 if atr_14 > 0 else 1.0
 
     if ratio > 3.0:
-        score = 1.0  # 极端波动，别碰
+        score = 1.0  # 鏋佺娉㈠姩锛屽埆纰?
     elif ratio > 2.0:
-        score = 3.0  # 高波动
+        score = 3.0  # 楂樻尝鍔?
     elif ratio > 1.5:
-        score = 5.0  # 偏高
+        score = 5.0  # 鍋忛珮
     elif ratio > 0.5:
-        score = 8.0  # 正常
+        score = 8.0  # 姝ｅ父
     else:
-        score = 6.0  # 极低波动（盘整）
+        score = 6.0  # 鏋佷綆娉㈠姩锛堢洏鏁达級
 
     return score, f"today_range/ATR14={ratio:.1f}x"
 
 
 def score_fear(data):
-    """⑥ 恐慌程度：连续下跌天数越多，恐慌越深，机会越大"""
+    """鈶?鎭愭厡绋嬪害锛氳繛缁笅璺屽ぉ鏁拌秺澶氾紝鎭愭厡瓒婃繁锛屾満浼氳秺澶?""
     if len(data) < 10:
         return 5.0, "insufficient"
 
-    # 数最近连续下跌天数
+    # 鏁版渶杩戣繛缁笅璺屽ぉ鏁?
     consecutive_down = 0
     for i in range(len(data) - 1, 0, -1):
         if data[i]["c"] < data[i - 1]["c"]:
@@ -233,7 +234,7 @@ def score_fear(data):
         else:
             break
 
-    # 连跌 0 天 → 4分, 3天 → 6分, 5天 → 8分, 7天+ → 10分
+    # 杩炶穼 0 澶?鈫?4鍒? 3澶?鈫?6鍒? 5澶?鈫?8鍒? 7澶? 鈫?10鍒?
     if consecutive_down <= 1:
         score = 4.0
     elif consecutive_down <= 3:
@@ -247,7 +248,7 @@ def score_fear(data):
 
 
 def compute_conviction(symbol="BTCUSDT"):
-    """计算综合信心评分"""
+    """璁＄畻缁煎悎淇″績璇勫垎"""
     data = load_ohlcv(symbol)
     if len(data) < 50:
         print(f"Not enough data for {symbol}")

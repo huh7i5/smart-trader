@@ -1,5 +1,6 @@
+Ôªø# -*- coding: utf-8 -*-
 """
-core/sell_market.py ‚Ä?Execute a market sell order
+core/sell_market.py Èà•?Execute a market sell order
 Usage: python core/sell_market.py SYMBOL [QUANTITY | --all]
 Example: python core/sell_market.py BTC 0.001
          python core/sell_market.py DRAMB --all
@@ -82,7 +83,7 @@ def sell_market(symbol: str, quantity: float = None, sell_all: bool = False):
     filled_qty = float(order.get("filled", 0) or quantity)
 
     print(f"\n{'=' * 60}")
-    print(f"  ‚ú?MARKET SELL COMPLETE")
+    print(f"  ÈâÅ?MARKET SELL COMPLETE")
     print(f"{'=' * 60}")
     print(f"  Order ID:  {order.get('id', '?')}")
     print(f"  Status:    {order.get('status', '?')}")

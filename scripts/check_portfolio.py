@@ -1,5 +1,6 @@
+﻿# -*- coding: utf-8 -*-
 """
-core/check_portfolio.py — Check current holdings, P&L, and open orders (Optimized)
+core/check_portfolio.py 鈥?Check current holdings, P&L, and open orders (Optimized)
 Usage: python core/check_portfolio.py
 """
 import sys, io, json, time

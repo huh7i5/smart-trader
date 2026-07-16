@@ -95,13 +95,14 @@ Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 | 🔴 | 🟢 | 🟢 | ⏸️ Wait for smart money confirmation |
 | 🔴 | 🔴 | 🔴 | ❌ Absolutely do not trade |
 
-## Trading Discipline (5 Iron Rules)
+## Trading Discipline (6 Iron Rules)
 
 1. **Never sell core positions in panic** — Bottom is where you feel most scared. If the thesis hasn't changed, the position stays.
 2. **Never chase pumps** — If an asset has risen >5% today, do NOT buy. Wait for a pullback or next entry opportunity.
 3. **Wait for confirmation** — Before major data releases (CPI, FOMC), do NOT place new orders. Wait for the data, then decide.
 4. **Cap each trade at 6-12% of capital** — Maximum $50-$100 per single trade for a $1,000 account. Spread entries across multiple tranches.
 5. **Always maintain 30%+ cash reserve** — Cash is ammunition. Without it, you can't capitalize on crashes. Never go all-in.
+6. **Never override the Pre-Trade Checklist verdict (One-Red-Stop Rule)** — If Smart Money or Retail Flow shows red (🔴 CAUTION), do NOT buy under any circumstances. Hype does not beat actual flow.
 
 ## Workflow
 

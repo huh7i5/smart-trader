@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-core/check_fund_flow.py �?Short-term fund flow analysis using Taker buy/sell
+core/check_fund_flow.py 鈥?Short-term fund flow analysis using Taker buy/sell
 volume and order book depth.
 
 Analyzes the last N hours of hourly candles to estimate whether buyers or
@@ -14,7 +15,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 import ccxt
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "new222" / "config.json"
 
 DEFAULT_SYMBOLS = ["BTC/USDT", "SOL/USDT", "LINK/USDT", "DOGE/USDT"]
 
@@ -140,8 +141,8 @@ def main():
         r = analyze_fund_flow(ex, sym, hours=args.hours)
         results.append(r)
 
-    # Order book analysis for BTC
-    ob_result = analyze_order_book(ex, "BTC/USDT")
+    # Order book analysis for first queried symbol
+    ob_result = analyze_order_book(ex, symbols[0])
 
     # Summary
     print(f"\n{'=' * 70}")
@@ -151,7 +152,7 @@ def main():
         tag = "🟢 NET BUY" if r["is_net_buy"] else "🔴 NET SELL"
         print(f"  {r['symbol']:16s}: {tag}")
     tag = "🟢 BUYERS" if ob_result["buyers_dominate"] else "🔴 SELLERS"
-    print(f"  BTC Order Book:   {tag} ({ob_result['ratio']:.2f}x)")
+    print(f"  {symbols[0]} Order Book: {tag} ({ob_result['ratio']:.2f}x)")
 
 
 if __name__ == "__main__":

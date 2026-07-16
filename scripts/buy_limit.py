@@ -1,5 +1,6 @@
+Ôªø# -*- coding: utf-8 -*-
 """
-core/buy_limit.py ‚Ä?Place a limit buy order
+core/buy_limit.py Èà•?Place a limit buy order
 Usage: python core/buy_limit.py SYMBOL PRICE AMOUNT_USDT
 Example: python core/buy_limit.py BTC 58800 50
 """
@@ -69,7 +70,7 @@ def buy_limit(symbol: str, price: float, cost_usdt: float):
     order = ex.create_limit_buy_order(sym, qty, price)
 
     print(f"\n{'=' * 60}")
-    print(f"  ‚ú?LIMIT BUY ORDER PLACED")
+    print(f"  ÈâÅ?LIMIT BUY ORDER PLACED")
     print(f"{'=' * 60}")
     print(f"  Order ID:  {order.get('id', '?')}")
     print(f"  Status:    {order.get('status', '?')}")
