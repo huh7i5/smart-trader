@@ -1,4 +1,4 @@
-# Trading Rules — The 5 Iron Rules of Crypto Smart Trader
+# Trading Rules — The 6 Iron Rules of Crypto Smart Trader
 
 ## Overview
 

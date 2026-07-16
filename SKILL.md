@@ -43,6 +43,7 @@ A disciplined, data-driven trading system for cryptocurrency and bStock (Binance
 
 | File | Open when |
 |------|-----------|
+| [references/user_profile.md](references/user_profile.md) | **Always read first** — User's trading personality, habits, FOMO triggers, order preferences, and communication style |
 | [references/trading_rules.md](references/trading_rules.md) | User asks about trading discipline, rules, or risk management |
 | [references/position_sizing.md](references/position_sizing.md) | User asks about how much to invest, batch sizing, or DCA planning |
 | [references/smart_money_signals.md](references/smart_money_signals.md) | User asks about smart money, whale activity, or fund flow interpretation |
@@ -103,6 +104,19 @@ Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
 4. **Cap each trade at 6-12% of capital** — Maximum $50-$100 per single trade for a $1,000 account. Spread entries across multiple tranches.
 5. **Always maintain 30%+ cash reserve** — Cash is ammunition. Without it, you can't capitalize on crashes. Never go all-in.
 6. **Never override the Pre-Trade Checklist verdict (One-Red-Stop Rule)** — If Smart Money or Retail Flow shows red (🔴 CAUTION), do NOT buy under any circumstances. Hype does not beat actual flow.
+
+## User Behavioral Awareness
+
+The AI assistant must be aware of the user's behavioral patterns to provide effective guardrails:
+
+- **FOMO Detection**: When the user shows excitement about news/earnings (e.g., "好机会", "要起飞", "赶紧加仓"), ALWAYS run the checklist FIRST before engaging. If red, firmly push back.
+- **Overtrading Detection**: If the user requests >2 order modifications within 1 hour (cancel + re-place + change type), flag it as potential overtrading and recommend stepping away from the screen.
+- **Limit Orders First**: Always propose limit buy orders at recent lows, never market orders, unless the user explicitly requests market execution.
+- **Cost Basis Transparency**: Before any buy, show the current average cost and the projected new average cost after the trade.
+- **Privacy Guard**: Never expose personal info (username, paths, API keys, exact portfolio totals) in any public-facing output.
+
+> [!IMPORTANT]
+> For the full behavioral profile, read [references/user_profile.md](references/user_profile.md) at the start of every new conversation.
 
 ## Workflow
 
