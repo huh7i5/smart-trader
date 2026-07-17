@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import requests
 
 from trader_runtime import (
+    http_headers,
     iso_utc,
     load_config,
     normalize_symbol,
@@ -66,16 +67,17 @@ def create_evidence(symbol: str, status: str, urls: list[str], note: str, timeou
     proxies = proxy_dict(config)
     checked: list[dict[str, Any]] = []
     with requests.Session() as session:
+        session.headers.update(http_headers(config))
         for url in urls:
             parsed = urlparse(url)
             if parsed.scheme not in {"http", "https"}:
                 raise ValueError(f"Unsupported source URL: {url}")
             try:
-                response = session.get(url, timeout=timeout, proxies=proxies, stream=True)
-                reachable = 200 <= response.status_code < 400
-                checked.append(
-                    {"url": url, "http_status": response.status_code, "reachable": reachable}
-                )
+                with session.get(url, timeout=timeout, proxies=proxies, stream=True) as response:
+                    reachable = 200 <= response.status_code < 400
+                    checked.append(
+                        {"url": url, "http_status": response.status_code, "reachable": reachable}
+                    )
             except requests.RequestException as exc:
                 checked.append({"url": url, "http_status": None, "reachable": False, "error": str(exc)})
     payload = {

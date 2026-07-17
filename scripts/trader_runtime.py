@@ -16,6 +16,11 @@ DEFAULT_STATE_DIR = ROOT_DIR / ".state"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "proxy": "",
+    "http_user_agent": (
+        "Mozilla/5.0 (compatible; crypto-smart-trader/1.0; "
+        "+https://github.com/huh7i5/smart-trader)"
+    ),
+    "sec_user_agent": "",
     "allow_live_trading": False,
     "testnet": False,
     "risk_per_trade_pct": 10,
@@ -85,6 +90,11 @@ def load_config(*, require_private: bool = False) -> dict[str, Any]:
 def proxy_dict(config: dict[str, Any]) -> dict[str, str] | None:
     proxy = str(config.get("proxy") or "").strip()
     return {"http": proxy, "https": proxy} if proxy else None
+
+
+def http_headers(config: dict[str, Any]) -> dict[str, str]:
+    user_agent = str(config.get("http_user_agent") or DEFAULT_CONFIG["http_user_agent"]).strip()
+    return {"User-Agent": user_agent, "Accept": "*/*"}
 
 
 def normalize_symbol(symbol: str) -> str:

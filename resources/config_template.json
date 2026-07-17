@@ -2,6 +2,8 @@
   "api_key": "YOUR_BINANCE_API_KEY",
   "api_secret": "YOUR_BINANCE_API_SECRET",
   "proxy": "",
+  "http_user_agent": "Mozilla/5.0 (compatible; crypto-smart-trader/1.0; +https://github.com/huh7i5/smart-trader)",
+  "sec_user_agent": "YOUR_APP_NAME YOUR_EMAIL@example.com",
   "allow_live_trading": false,
   "testnet": false,
   "risk_per_trade_pct": 10,

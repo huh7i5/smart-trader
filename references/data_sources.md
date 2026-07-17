@@ -35,6 +35,28 @@ The checklist accepts only recent URL-backed evidence created by `macro_evidence
 
 When evidence cannot be obtained, report `unknown` and block active trading.
 
-## Research Snapshot
+## Unified Technical, Fundamental, and News Snapshot
+
+`research_snapshot.py` refreshes the three research dimensions for held, requested, or shortlisted symbols. It saves both a latest artifact and a timestamped archive in `.state/`.
+
+### Technical
+
+Technical evidence comes from Binance `ticker/24hr`, `klines`, and `depth`. The script calculates 24-hour, seven-day, and 30-day changes, SMA20/50, RSI14, 20-day annualized volatility, six-hour taker flow, and visible bid/ask notional. These are market proxies, not forecasts or trader-identity evidence.
+
+When a newly listed bStock has fewer than 51 daily candles, longer-horizon indicators use its linked underlying ticker through Yahoo's public chart endpoint. Binance still supplies the bStock's current price, taker flow, and visible depth. The report labels the history as `underlying_stock_reference` and `official_exchange_feed=false`; do not assume the exchange-session stock and 24/7 bStock are always identical.
+
+### Fundamental
+
+Every symbol receives Binance trading status, product tags, quote volume, and trade count. For crypto, this is explicitly a market-liquidity/adoption proxy; it is not on-chain activity, protocol revenue, treasury, token unlock, or issuer financial coverage.
+
+For bStocks, the script strips the Binance `B` suffix, resolves the underlying ticker through the official SEC company-ticker file, and fetches recent material filings from `data.sec.gov/submissions`. SEC fair-access policy requires a configured `sec_user_agent` containing an application name and real contact email. Missing configuration returns `partial` instead of using a third-party ticker map.
+
+### News
+
+The Federal Reserve RSS feed is an official macro source. Google News RSS is used only to discover current symbol coverage. The script decodes aggregator URLs, verifies that the original publisher page is reachable, and preserves publisher and publication time.
+
+Discovery, decoding, and reachability do not establish accuracy, relevance, independence, or market impact. Keep `review_required=true`; open and read the original sources before creating `macro_evidence.py` input. Never generate `clear`, `caution`, or `blocked` from headline sentiment alone.
+
+## Historical Note
 
 On 2026-07-17, the official live product response contained 36 trading USDT products tagged `bStocks`, while the previous repository hardcoded 33. This demonstrates why live discovery is mandatory and manual counts must not be quoted as current facts.

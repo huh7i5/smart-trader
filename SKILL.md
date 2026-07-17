@@ -1,6 +1,6 @@
 ---
 name: crypto-smart-trader
-description: Evidence-backed Binance Spot and bStocks trading assistant for live market rankings, portfolio checks, taker-flow analysis, pre-trade validation, guarded order proposals, position sizing, and DCA planning. Use for Binance spot questions such as current rankings, top gainers/losers, bStocks lists, "什么情况", "BN/Binance 排行榜", "查看持仓", "资金流向", "交易前检查", "买入", "卖出", "挂单", "定投计划", "仓位管理", "止损", or "止盈". Do not use for futures, leverage, DeFi, tax, or fully autonomous trading.
+description: Evidence-backed Binance Spot and bStocks trading assistant with automatic technical, fundamental, and news refresh; live rankings, portfolio checks, taker-flow analysis, pre-trade validation, guarded order proposals, position sizing, and DCA planning. Use for Binance spot questions such as current rankings, top gainers/losers, bStocks lists, opportunities, "什么情况", "BN/Binance 排行榜", "查看持仓", "资金流向", "基本面", "消息面", "技术面", "交易前检查", "买入", "卖出", "挂单", "定投计划", "仓位管理", "止损", or "止盈". Do not use for futures, leverage, DeFi, tax, or fully autonomous trading.
 ---
 
 # Crypto Smart Trader
@@ -18,6 +18,8 @@ Apply these rules before every live-market answer:
 5. Treat market evidence older than five minutes as stale and rerun it.
 6. Never call a two-point scan "fully green". A trade verdict requires all three checks, including verified macro/news evidence.
 7. Never invent URLs, article titles, Binance announcements, rankings, fills, balances, or API results.
+8. For every live market, portfolio, ranking, opportunity, or trade question, refresh technical, fundamental, and news evidence for all held, requested, or shortlisted symbols with `research_snapshot.py`.
+9. Treat news search results as discovery only until the original publisher URL is decoded, reachable, opened, and reviewed. The snapshot never grants trade permission.
 
 These rules override conversational helpfulness. A truthful failure is better than a fluent hallucination.
 
@@ -38,23 +40,43 @@ Use `--category crypto` for crypto only and `--category all` for every Binance S
 
 The script discovers bStocks dynamically from Binance's `bStocks` product tag and intersects them with currently trading Spot markets. Do not maintain or quote a manual bStock count.
 
+After identifying held or shortlisted symbols, run the unified research snapshot for those symbols. Do not run per-symbol news research for every market in the full ranking universe.
+
+## Unified Research Workflow
+
+Run this before answering every live question about held, requested, or shortlisted assets:
+
+```bash
+python ${SKILL_DIR}/scripts/research_snapshot.py --symbols BTC SOL NVDAB DRAMB --json
+```
+
+The snapshot must refresh all three dimensions:
+
+- `technical`: Binance 24h change, six-hour taker flow, and visible order-book structure plus 7d/30d, SMA20/50, RSI14, and volatility. When a bStock has insufficient daily history, use its linked underlying stock as a labeled longer-horizon reference.
+- `fundamental`: Binance liquidity/product metadata for every asset. For bStocks, also fetch official SEC EDGAR identity and recent material filings when `sec_user_agent` is configured.
+- `news`: Federal Reserve official releases plus recent symbol news discovered through Google News, decoded to original publisher URLs, and checked for reachability.
+
+Verify `fetched_at_utc`, `record_count`, each dimension's `status`, and the evidence path. Report a missing dimension as `DATA_UNAVAILABLE`. A crypto fundamental result marked `proxy` is not on-chain or issuer-fundamental coverage. A news result marked `review_required` must be opened and interpreted before creating macro evidence.
+
+Set `sec_user_agent` in local configuration to an application name and real contact email. Without it, bStock SEC coverage must remain `partial`; do not bypass SEC fair-access requirements.
+
 ## Current Market Workflow
 
 When the user asks "什么情况" or "现在呢":
 
-1. Run `check_prices.py` for held or requested symbols.
+1. If private credentials are configured, run `check_portfolio.py` when holdings or cash affect the answer.
 2. Run `binance_market_scan.py` when relative market position or rankings matter.
-3. Run `check_fund_flow.py` for actual Binance taker-buy volume and visible order-book depth.
-4. If private credentials are configured, run `check_portfolio.py` when holdings or cash affect the answer.
-5. Separate measured facts from interpretation. Label order-book/trend logic as a proxy, never as proof of institutional activity.
+3. Run `research_snapshot.py` for every held, requested, or shortlisted symbol.
+4. Review verified original news URLs and create macro evidence only after assessing relevance and impact.
+5. Separate measured facts from interpretation. Label market metadata, order-book, and trend logic as proxies, never as issuer fundamentals or proof of institutional activity.
 
 ## Pre-Trade Workflow
 
 Apply this sequence to every active or booster buy:
 
 1. Read [references/user_profile.md](references/user_profile.md). If a local `user_profile.local.json` exists, use it without exposing it.
-2. Fetch current price, market ranking context, and taker flow with bundled scripts.
-3. Use an available web search or browser tool to open current macro, company, sector, security, and regulatory sources. Do not rely on snippets alone.
+2. Run `research_snapshot.py` for the exact symbol and use its technical, fundamental, and verified-news output.
+3. Open the snapshot's original publisher URLs and use an available web search or browser tool to fill material gaps in macro, company, sector, security, and regulatory coverage. Do not rely on snippets alone.
 4. Save reachable source URLs as evidence. A `clear` verdict requires at least two independent sources:
 
 ```bash
@@ -108,6 +130,7 @@ Baseline DCA is the only checklist exception. Use `--mode baseline` only when th
 ## Research and Strategy References
 
 - Read [references/data_sources.md](references/data_sources.md) before changing live data semantics or ranking logic.
+- Read [references/quant_architecture.md](references/quant_architecture.md) before changing the research, risk, execution, or backtest pipeline.
 - Read [references/trading_rules.md](references/trading_rules.md) for behavioral and risk rules.
 - Read [references/position_sizing.md](references/position_sizing.md) for allocation planning.
 - Read [references/baseline_booster_strategy.md](references/baseline_booster_strategy.md) for baseline versus booster modes.

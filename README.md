@@ -8,6 +8,7 @@
 
 - 动态发现 Binance Spot 与 bStocks 市场并生成涨跌幅、成交量榜单。
 - 使用 Binance Kline 与订单簿数据分析 taker flow 和可见深度。
+- 每次研究自动刷新技术面、基本面和消息面，并保存统一证据快照。
 - 将实时结果保存为带 UTC 时间、数据源和记录数的 JSON 证据。
 - 通过市场结构、资金流、宏观/新闻三项检查控制主动交易。
 - 使用两阶段预览与一次性 token 保护买入、卖出和撤单操作。
@@ -49,11 +50,16 @@ python scripts/check_portfolio.py
 python scripts/check_prices.py BTC SOL DRAMB NVDAB
 python scripts/check_fund_flow.py --hours 6 --symbols BTC SOL
 
+# 技术面 + 基本面 + 消息面统一刷新
+python scripts/research_snapshot.py --symbols BTC SOL NVDAB DRAMB --json
+
 # 交易前检查
 python scripts/pre_trade_checklist.py --symbol BTC/USDT --json
 ```
 
 宏观/新闻证据必须来自实际可访问的 URL。缺失、过期或不可访问的证据会使主动交易停止。只有三项检查全部通过，系统才允许生成订单预览。
+
+bStocks 的官方基本面使用 SEC EDGAR。请在本地 `config.json` 的 `sec_user_agent` 中填写应用名称和真实联系邮箱；未配置时 SEC 部分会明确返回 `partial`，不会使用猜测数据补全。
 
 ## 下单保护
 
