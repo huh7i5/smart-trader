@@ -110,6 +110,7 @@ def create_exchange(*, private: bool = False):
             "defaultType": "spot",
             "adjustForTimeDifference": True,
             "recvWindow": 60000,
+            "fetchOpenOrders": {"warnWithoutSymbol": False},
         },
     }
     if private:
