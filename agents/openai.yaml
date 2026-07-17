@@ -1,0 +1,4 @@
+interface:
+  display_name: "Crypto Smart Trader"
+  short_description: "Evidence-backed Binance Spot trading assistant"
+  default_prompt: "Use $crypto-smart-trader to fetch fresh Binance evidence before analyzing or proposing any trade."

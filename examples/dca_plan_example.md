@@ -36,7 +36,7 @@
 | Week 3 (15th-21st) | Buy bStocks (GOOGLB, NVDAB, QQQ) | $200 |
 | Week 4 (22nd-28th) | Replenish cash reserve | $300 |
 
-**Important**: If the 3-Point Checklist shows 🔴 on buy day, SKIP that week's buy and add the amount to cash reserve. Execute when checklist turns 🟢.
+**Important**: Active/booster buys require all three checks to pass. A separately configured baseline DCA may still create its small scheduled proposal, but it requires risk validation and explicit confirmation before execution.
 
 ---
 

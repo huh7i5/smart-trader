@@ -1,89 +1,77 @@
-﻿# -*- coding: utf-8 -*-
-"""
-core/cancel_order.py 鈥?Cancel open orders
-Usage: python core/cancel_order.py ORDER_ID SYMBOL
-       python core/cancel_order.py --all           (cancel all open orders)
-Example: python core/cancel_order.py 64333741291 BTC/USDT
-"""
-import sys, io, json
-from pathlib import Path
+"""Preview or execute guarded cancellation of Binance Spot orders."""
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+from __future__ import annotations
 
-import ccxt
+import argparse
+import sys
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
-
-
-def create_exchange():
-    cfg = json.load(open(CONFIG_PATH))
-    ex = ccxt.binance({
-        "apiKey": cfg["api_key"],
-        "secret": cfg["api_secret"],
-        "enableRateLimit": True,
-        "timeout": 60000,
-        "options": {
-            "defaultType": "spot",
-            "adjustForTimeDifference": True,
-            "recvWindow": 60000,
-        },
-    })
-    if cfg.get("proxy"):
-        ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-    st = ex.fetch_time()
-    lt = ex.milliseconds()
-    ex.options["timeDifference"] = lt - st
-    ex.load_markets()
-    return ex
+from order_safety import (
+    SafetyError,
+    assert_order_execution_enabled,
+    consume_proposal,
+    create_proposal,
+    load_proposal,
+    lock_proposal_for_submission,
+)
+from trader_runtime import ConfigurationError, create_exchange, normalize_symbol
 
 
-def cancel_order(order_id: str, symbol: str):
-    """Cancel a specific order."""
-    ex = create_exchange()
-    sym = symbol if "/" in symbol else f"{symbol.upper()}/USDT"
-
-    print(f"Cancelling order {order_id} for {sym}...")
-    result = ex.cancel_order(order_id, sym)
-
-    print(f"\n{'=' * 60}")
-    print(f"  鉁?ORDER CANCELLED")
-    print(f"{'=' * 60}")
-    print(f"  Order ID: {order_id}")
-    print(f"  Symbol:   {sym}")
-    print(f"  Status:   {result.get('status', 'cancelled')}")
-    print(f"{'=' * 60}")
-
-
-def cancel_all_orders():
-    """Cancel all open orders."""
-    ex = create_exchange()
-    open_orders = ex.fetch_open_orders()
-
-    if not open_orders:
-        print("No open orders to cancel.")
-        return
-
-    print(f"Found {len(open_orders)} open order(s). Cancelling...")
-    for o in open_orders:
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Guarded order cancellation; previews by default")
+    parser.add_argument("--order-id")
+    parser.add_argument("--symbol")
+    parser.add_argument("--all", action="store_true", dest="cancel_all")
+    parser.add_argument("--confirm")
+    args = parser.parse_args()
+    if not args.cancel_all and (not args.order_id or not args.symbol):
+        parser.error("provide --order-id and --symbol, or use --all")
+    symbol = normalize_symbol(args.symbol) if args.symbol else None
+    params = {"order_id": args.order_id, "symbol": symbol, "cancel_all": args.cancel_all}
+    try:
+        exchange = create_exchange(private=True)
+        open_orders = exchange.fetch_open_orders(symbol) if symbol else exchange.fetch_open_orders()
+        targets = open_orders if args.cancel_all else [
+            order for order in open_orders if str(order.get("id")) == str(args.order_id)
+        ]
+        if not targets:
+            raise SafetyError("no matching open orders")
+        target_summary = [
+            {"id": str(order.get("id")), "symbol": order.get("symbol"), "side": order.get("side"), "price": order.get("price")}
+            for order in targets
+        ]
+        params["targets"] = target_summary
+        if not args.confirm:
+            proposal = create_proposal(
+                action="cancel_orders",
+                params=params,
+                checklist=None,
+                snapshot={"target_count": len(targets)},
+            )
+            print("PREVIEW ONLY - NO ORDERS CANCELLED")
+            for target in target_summary:
+                print(f"  {target['id']} {target['symbol']} {target['side']} @ {target['price']}")
+            print(f"Proposal token: {proposal['token']}")
+            print("Wait for explicit user confirmation before rerunning with --confirm TOKEN.")
+            return 0
+        proposal = load_proposal(args.confirm, action="cancel_orders", params=params)
+        assert_order_execution_enabled()
+        lock_proposal_for_submission(proposal)
         try:
-            ex.cancel_order(o["id"], o["symbol"])
-            print(f"  鉁?Cancelled: {o['symbol']} {o['side']} @ {o.get('price', '?')} (ID: {o['id']})")
-        except Exception as e:
-            print(f"  鉂?Failed to cancel {o['id']}: {e}")
-
-    print(f"\nDone. Cancelled {len(open_orders)} order(s).")
+            for order in targets:
+                exchange.cancel_order(order["id"], order["symbol"])
+        except Exception as exc:
+            print(
+                f"CANCEL_STATE_UNKNOWN: {exc}. Token locked; refresh open orders before any retry.",
+                file=sys.stderr,
+            )
+            return 3
+        consume_proposal(proposal, None)
+        print(f"CANCELLED {len(targets)} ORDER(S)")
+        return 0
+    except (SafetyError, ConfigurationError, ValueError, KeyError) as exc:
+        print(f"CANCEL_BLOCKED: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python cancel_order.py ORDER_ID SYMBOL")
-        print("       python cancel_order.py --all")
-        sys.exit(1)
-
-    if sys.argv[1] == "--all":
-        cancel_all_orders()
-    elif len(sys.argv) >= 3:
-        cancel_order(sys.argv[1], sys.argv[2])
-    else:
-        print("Error: Specify ORDER_ID and SYMBOL, or use --all")
-        sys.exit(1)
+    raise SystemExit(main())

@@ -1,112 +1,77 @@
-﻿# -*- coding: utf-8 -*-
-"""
-core/sell_market.py 鈥?Execute a market sell order
-Usage: python core/sell_market.py SYMBOL [QUANTITY | --all]
-Example: python core/sell_market.py BTC 0.001
-         python core/sell_market.py DRAMB --all
-"""
-import sys, io, json, math
-from pathlib import Path
+"""Preview or execute a guarded Binance Spot market sell."""
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+from __future__ import annotations
 
-import ccxt
+import argparse
+import sys
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
-
-
-def create_exchange():
-    cfg = json.load(open(CONFIG_PATH))
-    ex = ccxt.binance({
-        "apiKey": cfg["api_key"],
-        "secret": cfg["api_secret"],
-        "enableRateLimit": True,
-        "timeout": 60000,
-        "options": {
-            "defaultType": "spot",
-            "adjustForTimeDifference": True,
-            "recvWindow": 60000,
-        },
-    })
-    if cfg.get("proxy"):
-        ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-    st = ex.fetch_time()
-    lt = ex.milliseconds()
-    ex.options["timeDifference"] = lt - st
-    ex.load_markets()
-    return ex
+from order_safety import (
+    SafetyError,
+    assert_order_execution_enabled,
+    consume_proposal,
+    create_proposal,
+    load_proposal,
+    lock_proposal_for_submission,
+)
+from trader_runtime import ConfigurationError, create_exchange, load_config, normalize_symbol
 
 
-def sell_market(symbol: str, quantity: float = None, sell_all: bool = False):
-    """Execute a market sell order."""
-    sym = f"{symbol.upper()}/USDT"
-    ex = create_exchange()
-
-    # Get current holdings
-    bal = ex.fetch_balance()
-    coin_bal = bal.get(symbol.upper(), {})
-    free_qty = float(coin_bal.get("free", 0) or 0)
-
-    if free_qty <= 0:
-        print(f"Error: No {symbol.upper()} available to sell (balance: {free_qty})")
-        sys.exit(1)
-
-    if sell_all:
-        quantity = free_qty
-    elif quantity is None or quantity <= 0:
-        print(f"Error: Specify quantity or use --all")
-        sys.exit(1)
-
-    if quantity > free_qty:
-        print(f"Error: Requested {quantity} but only {free_qty} available")
-        sys.exit(1)
-
-    # Precision
-    mkt = ex.market(sym)
-    ap = mkt.get("precision", {}).get("amount", 8)
-    if isinstance(ap, int):
-        quantity = math.floor(quantity * 10**ap) / 10**ap
-    else:
-        quantity = float(ex.amount_to_precision(sym, quantity))
-
-    # Current price
-    ticker = ex.fetch_ticker(sym)
-    current_price = float(ticker["last"])
-    est_value = quantity * current_price
-
-    print(f"Current {symbol.upper()} price: ${current_price:,.2f}")
-    print(f"Selling {quantity} {symbol.upper()} (~${est_value:.2f} USDT)...")
-
-    order = ex.create_market_sell_order(sym, quantity)
-    filled_price = float(order.get("average", 0) or order.get("price", 0) or current_price)
-    filled_cost = float(order.get("cost", 0) or quantity * filled_price)
-    filled_qty = float(order.get("filled", 0) or quantity)
-
-    print(f"\n{'=' * 60}")
-    print(f"  鉁?MARKET SELL COMPLETE")
-    print(f"{'=' * 60}")
-    print(f"  Order ID:  {order.get('id', '?')}")
-    print(f"  Status:    {order.get('status', '?')}")
-    print(f"  Sold:      {filled_qty} {symbol.upper()}")
-    print(f"  Avg Price: ${filled_price:,.2f}")
-    print(f"  Received:  ${filled_cost:.2f} USDT")
-    print(f"{'=' * 60}")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Guarded market sell; previews by default")
+    parser.add_argument("symbol")
+    quantity_group = parser.add_mutually_exclusive_group(required=True)
+    quantity_group.add_argument("--quantity", type=float)
+    quantity_group.add_argument("--all", action="store_true", dest="sell_all")
+    parser.add_argument("--confirm")
+    args = parser.parse_args()
+    symbol = normalize_symbol(args.symbol)
+    params = {"symbol": symbol, "quantity": args.quantity, "sell_all": args.sell_all}
+    try:
+        config = load_config(require_private=True)
+        if args.sell_all and symbol in config.get("core_symbols", []) and not config.get("allow_core_full_sell"):
+            raise SafetyError(
+                "full sale of a core symbol is disabled; set allow_core_full_sell=true only after thesis review"
+            )
+        exchange = create_exchange(private=True)
+        base = symbol.split("/")[0]
+        balance = exchange.fetch_balance()
+        free_quantity = float(balance.get(base, {}).get("free", 0) or 0)
+        quantity = free_quantity if args.sell_all else float(args.quantity or 0)
+        if quantity <= 0 or quantity > free_quantity:
+            raise SafetyError(f"invalid quantity {quantity}; available {free_quantity}")
+        quantity = float(exchange.amount_to_precision(symbol, quantity))
+        price = float(exchange.fetch_ticker(symbol)["last"])
+        params["resolved_quantity"] = quantity
+        if not args.confirm:
+            proposal = create_proposal(
+                action="market_sell",
+                params=params,
+                checklist=None,
+                snapshot={"free_quantity": free_quantity, "market_price": price, "estimated_value_usdt": quantity * price},
+            )
+            print("PREVIEW ONLY - NO ORDER SENT")
+            print(f"Sell: {quantity} {base} near {price:,.8g} (~{quantity * price:.2f} USDT)")
+            print(f"Proposal token: {proposal['token']}")
+            print("Wait for explicit user confirmation before rerunning with --confirm TOKEN.")
+            return 0
+        proposal = load_proposal(args.confirm, action="market_sell", params=params)
+        assert_order_execution_enabled()
+        lock_proposal_for_submission(proposal)
+        try:
+            order = exchange.create_market_sell_order(symbol, quantity)
+        except Exception as exc:
+            print(
+                f"ORDER_STATE_UNKNOWN: {exc}. Token locked; verify open orders and portfolio before any retry.",
+                file=sys.stderr,
+            )
+            return 3
+        consume_proposal(proposal, str(order.get("id")) if order.get("id") else None)
+        print(f"MARKET SELL SUBMITTED | id={order.get('id')} | status={order.get('status')}")
+        return 0
+    except (SafetyError, ConfigurationError, ValueError, KeyError) as exc:
+        print(f"ORDER_BLOCKED: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python sell_market.py SYMBOL [QUANTITY | --all]")
-        print("Example: python sell_market.py BTC 0.001")
-        print("         python sell_market.py DRAMB --all")
-        sys.exit(1)
-
-    symbol = sys.argv[1]
-    sell_all = "--all" in sys.argv
-    qty = None
-    if not sell_all and len(sys.argv) >= 3:
-        try:
-            qty = float(sys.argv[2])
-        except ValueError:
-            pass
-
-    sell_market(symbol, qty, sell_all)
+    raise SystemExit(main())

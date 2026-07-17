@@ -1,5 +1,8 @@
 # Configuration files
 config.json
+user_profile.local.json
+.state/
+.cache/
 
 # Python environment & cache
 __pycache__/

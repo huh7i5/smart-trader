@@ -3,6 +3,9 @@
 **Data Period:** 2022-12-25 to 2026-07-16 (1,300 Trading Days / 3.6 Years)  
 **Base Asset:** BTC/USDT (Spot Accumulation)
 
+> [!CAUTION]
+> This is an exploratory historical report, not live-deployment approval. Revalidate with next-period execution, fees, slippage, equal-risk benchmarks, immutable data snapshots, and a new holdout before using its parameters operationally.
+
 ---
 
 ## 1. Executive Summary

@@ -1,240 +1,219 @@
-# -*- coding: utf-8 -*-
-"""
-core/pre_trade_checklist.py ?Automated 3-Point Pre-Trade Checklist
-
-Runs the three mandatory checks before any trade:
-  �?Smart Money Direction (ETF flows + whale signals)
-  �?Retail Behavior (Taker volume + order book depth)
-  �?Macro Events (upcoming CPI, FOMC, earnings)
-
-Only proceed when all three checks pass (🟢🟢🟢).
-
-Usage: python core/pre_trade_checklist.py [--symbol BTC/USDT]
-"""
-import sys, io, json, datetime, argparse
-from pathlib import Path
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-
-import ccxt
-
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.json"
-
-
-def create_exchange():
-    """Create and configure Binance exchange client."""
-    cfg = json.load(open(CONFIG_PATH))
-    ex = ccxt.binance({
-        "apiKey": cfg["api_key"],
-        "secret": cfg["api_secret"],
-        "enableRateLimit": True,
-        "timeout": 30000,
-        "options": {
-            "defaultType": "spot",
-            "adjustForTimeDifference": True,
-            "recvWindow": 60000,
-        },
-    })
-    if cfg.get("proxy"):
-        ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-    st = ex.fetch_time()
-    lt = ex.milliseconds()
-    ex.options["timeDifference"] = lt - st
-    ex.load_markets()
-    return ex
-
-
-def check_smart_money(ex, sym="BTC/USDT"):
-    """
-    Check �?�?Smart Money Direction.
-    Uses 24h kline data to detect if price is stable despite selling pressure,
-    which indicates smart money accumulation.
-    """
-    # Fetch daily kline for longer-term trend
-    daily = ex.fetch_ohlcv(sym, timeframe="1d", limit=7)
-
-    # Calculate 7-day trend
-    if len(daily) >= 7:
-        week_ago_close = daily[0][4]
-        current_close = daily[-1][4]
-        weekly_change = (current_close - week_ago_close) / week_ago_close * 100
-    else:
-        weekly_change = 0
-
-    # Check order book for hidden buying (iceberg order detection)
-    ob = ex.fetch_order_book(sym, limit=20)
-    total_bid = sum(b[0] * b[1] for b in ob["bids"])
-    total_ask = sum(a[0] * a[1] for a in ob["asks"])
-    bid_ask_ratio = total_bid / total_ask if total_ask > 0 else 0
-
-    # Smart money signal: price trending up AND buy wall > sell wall
-    is_bullish = weekly_change > 0 and bid_ask_ratio > 1.0
-
-    status = "🟢 PASS" if is_bullish else "🔴 CAUTION"
-
-    print(f"\n  �?Smart Money Direction: {status}")
-    print(f"     7-day trend: {weekly_change:+.2f}%")
-    print(f"     Bid/Ask ratio: {bid_ask_ratio:.2f}x {'(buyers dominate)' if bid_ask_ratio > 1 else '(sellers dominate)'}")
-    if is_bullish:
-        print("     �?Smart money appears to be accumulating")
-    else:
-        print("     �?Smart money direction unclear or bearish")
-
-    return is_bullish
-
-
-def check_retail_behavior(ex, sym="BTC/USDT", hours=6):
-    """
-    Check �?�?Retail Behavior.
-    Analyzes short-term taker buy/sell volume to identify retail sentiment.
-    Ideal signal: retail selling but price NOT dropping (smart money absorbing).
-    """
-    klines = ex.fetch_ohlcv(sym, timeframe="1h", limit=hours)
-
-    total_buy = 0
-    total_sell = 0
-
-    for k in klines:
-        o, h, l, c, vol = k[1], k[2], k[3], k[4], k[5]
-        price_range = h - l
-        if price_range > 0:
-            buy_ratio = (c - l) / price_range
-        else:
-            buy_ratio = 0.5
-        total_buy += vol * buy_ratio
-        total_sell += vol * (1 - buy_ratio)
-
-    net_flow = total_buy - total_sell
-    is_net_buy = net_flow > 0
-
-    # Price change over the analysis period
-    if len(klines) >= 2:
-        price_start = klines[0][1]  # open of first candle
-        price_end = klines[-1][4]   # close of last candle
-        price_change = (price_end - price_start) / price_start * 100
-    else:
-        price_change = 0
-
-    # Bullish signal: either net buying, or retail selling but price stable
-    retail_selling_price_stable = (not is_net_buy) and (price_change > -1.0)
-    is_favorable = is_net_buy or retail_selling_price_stable
-
-    status = "🟢 PASS" if is_favorable else "🔴 CAUTION"
-
-    print(f"\n  �?Retail Behavior ({hours}h): {status}")
-    print(f"     Net flow: {'🟢 NET BUY' if is_net_buy else '🔴 NET SELL'}")
-    print(f"     Price change: {price_change:+.2f}%")
-    if retail_selling_price_stable:
-        print("     �?Retail is selling but price is stable = bottom signal (smart money absorbing)")
-    elif is_net_buy:
-        print("     �?Retail is buying, positive sentiment")
-    else:
-        print("     �?Retail is selling AND price is dropping = risk")
-
-    return is_favorable
-
-
-def check_macro_events():
-    """
-    Check �?�?Macro Events Calendar.
-    Checks if there are any major upcoming events that could cause volatility.
-    NOTE: This is a simplified version. In production, integrate with an
-    economic calendar API.
-    """
-    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
-
-    # Known major event dates (update periodically)
-    # Format: (month, day, description, risk_level)
-    major_events = [
-        # US CPI releases (typically 2nd or 3rd Tuesday of the month)
-        (7, 14, "US CPI June 2026", "HIGH"),
-        (8, 12, "US CPI July 2026", "HIGH"),
-        (9, 10, "US CPI August 2026", "HIGH"),
-        # FOMC meetings
-        (7, 29, "FOMC Meeting", "HIGH"),
-        (7, 30, "FOMC Rate Decision", "CRITICAL"),
-        (9, 16, "FOMC Meeting", "HIGH"),
-        (9, 17, "FOMC Rate Decision", "CRITICAL"),
-        # Earnings season
-        (7, 22, "Google (GOOGL) Earnings", "MEDIUM"),
-        (7, 23, "Tesla (TSLA) Earnings", "MEDIUM"),
-        (7, 24, "Microsoft (MSFT) Earnings", "MEDIUM"),
-        (7, 31, "Apple (AAPL) Earnings", "MEDIUM"),
-        # Crypto-specific
-        (7, 16, "CXMT (ChangXin Memory) IPO", "HIGH"),
-    ]
-
-    upcoming = []
-    for month, day, desc, risk in major_events:
-        try:
-            event_date = datetime.datetime(now.year, month, day, tzinfo=now.tzinfo)
-            delta = (event_date - now).total_seconds() / 3600  # hours until event
-            if 0 < delta < 48:  # within next 48 hours
-                upcoming.append((delta, desc, risk))
-        except ValueError:
-            pass
-
-    has_critical = any(r == "CRITICAL" for _, _, r in upcoming)
-    has_high = any(r == "HIGH" for _, _, r in upcoming)
-    is_clear = len(upcoming) == 0
-
-    if is_clear:
-        status = "🟢 PASS"
-    elif has_critical:
-        status = "🔴 BLOCKED"
-    elif has_high:
-        status = "🟡 CAUTION"
-    else:
-        status = "🟢 PASS"
-
-    print(f"\n  �?Macro Events (next 48h): {status}")
-    if upcoming:
-        for hours_until, desc, risk in sorted(upcoming):
-            risk_emoji = {"CRITICAL": "🔴", "HIGH": "🟡", "MEDIUM": "🟢"}.get(risk, "?")
-            print(f"     {risk_emoji} {desc} �?in {hours_until:.1f} hours ({risk})")
-    else:
-        print("     No major events in the next 48 hours")
-
-    return is_clear or (not has_critical)
-
-
-def run_checklist(symbol="BTC/USDT"):
-    """Run the full 3-point pre-trade checklist."""
-    print("=" * 60)
-    print("  📋 PRE-TRADE CHECKLIST")
-    print(f"  Symbol: {symbol}")
-    print(f"  Time: {datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')} (Beijing)")
-    print("=" * 60)
-
-    ex = create_exchange()
-
-    check1 = check_smart_money(ex, symbol)
-    check2 = check_retail_behavior(ex, symbol)
-    check3 = check_macro_events()
-
-    all_pass = check1 and check2 and check3
-
-    print(f"\n{'=' * 60}")
-    print(f"  VERDICT: {'�?ALL CLEAR �?SAFE TO TRADE' if all_pass else '�?DO NOT TRADE �?CONDITIONS NOT MET'}")
-    print(f"{'=' * 60}")
-
-    checks = [
-        ("�?Smart Money", check1),
-        ("�?Retail Behavior", check2),
-        ("�?Macro Events", check3),
-    ]
-    for name, passed in checks:
-        print(f"  {name}: {'🟢' if passed else '🔴'}")
-
-    if not all_pass:
-        print("\n  ⚠️ Recommendation: Wait for all conditions to turn green.")
-        print("  Re-run this checklist before attempting any trade.")
-
-    return all_pass
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Pre-trade checklist")
-    parser.add_argument("--symbol", default="BTC/USDT", help="Symbol to check")
-    args = parser.parse_args()
-    run_checklist(args.symbol)
+"""Evidence-backed three-point pre-trade checklist.
+
+This script uses Binance public market data and a separately verified macro/news
+evidence file. Missing or stale data fails closed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+import requests
+
+from macro_evidence import evidence_path, validate_evidence
+from trader_runtime import (
+    iso_utc,
+    load_config,
+    normalize_symbol,
+    proxy_dict,
+    read_json,
+    state_dir,
+    symbol_id,
+    write_json_atomic,
+)
+
+
+KLINES_URL = "https://api.binance.com/api/v3/klines"
+DEPTH_URL = "https://api.binance.com/api/v3/depth"
+
+
+class ChecklistDataError(RuntimeError):
+    """Raised when required live evidence is missing or malformed."""
+
+
+def fetch_json(session: requests.Session, url: str, *, params: dict[str, Any], timeout: int, proxies=None):
+    response = session.get(url, params=params, timeout=timeout, proxies=proxies)
+    response.raise_for_status()
+    return response.json()
+
+
+def smart_money_proxy(daily: list[list[Any]], depth: dict[str, Any]) -> dict[str, Any]:
+    """Measure trend and visible order-book imbalance; do not label it institutional flow."""
+    if len(daily) < 7:
+        raise ChecklistDataError("fewer than seven daily candles")
+    start_close = float(daily[0][4])
+    end_close = float(daily[-1][4])
+    weekly_change = (end_close - start_close) / start_close * 100
+    bids = depth.get("bids") or []
+    asks = depth.get("asks") or []
+    if not bids or not asks:
+        raise ChecklistDataError("empty Binance order book")
+    bid_notional = sum(float(price) * float(qty) for price, qty in bids)
+    ask_notional = sum(float(price) * float(qty) for price, qty in asks)
+    ratio = bid_notional / ask_notional if ask_notional > 0 else 0.0
+    passed = weekly_change > 0 and ratio > 1.0
+    return {
+        "name": "market_structure_proxy",
+        "status": "pass" if passed else "caution",
+        "passed": passed,
+        "weekly_change_pct": round(weekly_change, 4),
+        "visible_bid_ask_notional_ratio": round(ratio, 4),
+        "limitations": (
+            "This is a price/order-book proxy, not ETF flow, whale holdings, or proof of smart-money activity."
+        ),
+    }
+
+
+def retail_taker_flow(hourly: list[list[Any]]) -> dict[str, Any]:
+    """Use Binance's real taker-buy volume field rather than candle-shape estimation."""
+    if len(hourly) < 2:
+        raise ChecklistDataError("fewer than two hourly candles")
+    total_volume = sum(float(row[5]) for row in hourly)
+    taker_buy = sum(float(row[9]) for row in hourly)
+    if total_volume <= 0:
+        raise ChecklistDataError("zero hourly trading volume")
+    taker_sell = max(0.0, total_volume - taker_buy)
+    buy_ratio = taker_buy / total_volume
+    start_price = float(hourly[0][1])
+    end_price = float(hourly[-1][4])
+    price_change = (end_price - start_price) / start_price * 100
+    selling_but_stable = taker_buy <= taker_sell and price_change > -1.0
+    passed = buy_ratio >= 0.5 or selling_but_stable
+    return {
+        "name": "retail_taker_flow",
+        "status": "pass" if passed else "caution",
+        "passed": passed,
+        "taker_buy_ratio": round(buy_ratio, 6),
+        "taker_buy_base_volume": round(taker_buy, 8),
+        "taker_sell_base_volume": round(taker_sell, 8),
+        "price_change_pct": round(price_change, 4),
+        "selling_but_price_stable": selling_but_stable,
+    }
+
+
+def macro_check(symbol: str, config: dict[str, Any], path: Path | None = None) -> dict[str, Any]:
+    target = path or evidence_path(symbol)
+    if not target.exists():
+        return {
+            "name": "macro_and_news",
+            "status": "unknown",
+            "passed": False,
+            "reason": f"No verified evidence file at {target}",
+            "evidence_path": str(target),
+        }
+    try:
+        payload = read_json(target)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "name": "macro_and_news",
+            "status": "unknown",
+            "passed": False,
+            "reason": f"Cannot read evidence: {exc}",
+            "evidence_path": str(target),
+        }
+    valid, reason = validate_evidence(
+        payload,
+        symbol=symbol,
+        max_age_hours=float(config.get("macro_evidence_ttl_hours", 6)),
+    )
+    status = payload.get("status", "unknown") if valid else "unknown"
+    return {
+        "name": "macro_and_news",
+        "status": status,
+        "passed": valid and status == "clear",
+        "reason": reason,
+        "checked_at_utc": payload.get("checked_at_utc"),
+        "sources": payload.get("sources", []),
+        "note": payload.get("note", ""),
+        "evidence_path": str(target),
+    }
+
+
+def run_checklist(symbol: str, *, evidence: Path | None = None, timeout: int = 20) -> dict[str, Any]:
+    normalized = normalize_symbol(symbol)
+    api_symbol = symbol_id(normalized)
+    config = load_config()
+    proxies = proxy_dict(config)
+    with requests.Session() as session:
+        daily = fetch_json(
+            session,
+            KLINES_URL,
+            params={"symbol": api_symbol, "interval": "1d", "limit": 8},
+            timeout=timeout,
+            proxies=proxies,
+        )
+        hourly = fetch_json(
+            session,
+            KLINES_URL,
+            params={"symbol": api_symbol, "interval": "1h", "limit": 6},
+            timeout=timeout,
+            proxies=proxies,
+        )
+        depth = fetch_json(
+            session,
+            DEPTH_URL,
+            params={"symbol": api_symbol, "limit": 100},
+            timeout=timeout,
+            proxies=proxies,
+        )
+
+    checks = [smart_money_proxy(daily, depth), retail_taker_flow(hourly), macro_check(normalized, config, evidence)]
+    all_pass = all(check["passed"] for check in checks)
+    return {
+        "schema_version": 1,
+        "symbol": normalized,
+        "checked_at_utc": iso_utc(),
+        "all_pass": all_pass,
+        "verdict": "trade_allowed" if all_pass else "do_not_trade",
+        "checks": checks,
+        "source": {
+            "klines": KLINES_URL,
+            "order_book": DEPTH_URL,
+            "macro_news": "URL-backed local evidence; missing evidence fails closed",
+        },
+    }
+
+
+def print_report(report: dict[str, Any]) -> None:
+    print(f"PRE-TRADE CHECKLIST | {report['symbol']} | {report['checked_at_utc']}")
+    for check in report["checks"]:
+        print(f"  {check['name']:<24} {check['status'].upper():<8} passed={check['passed']}")
+    print(f"VERDICT: {report['verdict'].upper()}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Evidence-backed pre-trade checklist")
+    parser.add_argument("--symbol", default="BTC/USDT")
+    parser.add_argument("--macro-evidence", type=Path)
+    parser.add_argument("--timeout", type=int, default=20)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
+    try:
+        report = run_checklist(
+            args.symbol,
+            evidence=args.macro_evidence.resolve() if args.macro_evidence else None,
+            timeout=max(3, args.timeout),
+        )
+    except (ChecklistDataError, requests.RequestException, ValueError) as exc:
+        print(f"CHECKLIST_UNAVAILABLE: {exc}", file=sys.stderr)
+        return 3
+
+    stamp = report["checked_at_utc"].replace(":", "").replace("-", "")
+    archived = state_dir() / f"checklist_{symbol_id(args.symbol)}_{stamp}.json"
+    latest = state_dir() / f"latest_checklist_{symbol_id(args.symbol)}.json"
+    write_json_atomic(archived, report)
+    write_json_atomic(latest, report)
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print_report(report)
+        print(f"Evidence: {latest}")
+    return 0 if report["all_pass"] else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

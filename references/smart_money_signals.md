@@ -1,151 +1,51 @@
-# Smart Money Signals — Interpretation Guide
+# Market Structure and External Flow Evidence
 
-## What is "Smart Money"?
+"Smart money" is an interpretation, not a field returned by Binance. Never infer the identity or intent of traders from price, volume, or a single order-book snapshot.
 
-Smart money refers to institutional investors, hedge funds, large whales (holding >1000 BTC), and market makers who have significant information advantages, faster execution, and deeper analysis capabilities than retail traders.
+## Evidence Classes
 
-**Core insight**: Smart money and retail traders often move in opposite directions. When retail panics and sells, smart money quietly accumulates. When retail FOMOs and buys at the top, smart money distributes.
+### Binance Taker Flow
 
----
+Use the real Kline fields documented in [data_sources.md](data_sources.md):
 
-## Signal 1: Bitcoin ETF Fund Flows
+- Taker buy volume measures market buys that crossed the spread.
+- Derived taker sell volume measures market sells that crossed the spread.
+- A high taker-buy ratio shows aggressive buying during the measured window; it does not prove retail or institutional identity.
+- Net selling with a stable price can indicate absorption, but it can also reflect passive market making, hidden liquidity, timing effects, or an incomplete candle. Treat it as a hypothesis requiring confirmation.
 
-### How to Read
+### Visible Order Book
 
-Bitcoin ETF flows track the net amount of money entering or leaving spot Bitcoin ETFs (like BlackRock's IBIT, Fidelity's FBTC, etc.). This is the most direct measure of institutional demand.
+Measure bid and ask notional over the same depth and at the same timestamp. Always disclose:
 
-| Flow Direction | Duration | Signal |
-|:---|:---|:---|
-| Net inflows >$100M/day | 3+ consecutive days | 🟢 Strong institutional buying |
-| Net inflows <$100M/day | Mixed | 🟡 Mild institutional interest |
-| Net outflows | 1-3 days | 🟡 Short-term repositioning (normal) |
-| Net outflows | 5+ consecutive days | 🔴 Institutional retreat (caution) |
-| Outflows → sudden large inflow | After extended outflow | 🟢 Trend reversal signal |
+- The requested depth.
+- The bid/ask notional ratio.
+- That orders can be cancelled or spoofed immediately.
+- That a snapshot cannot identify iceberg orders or ownership.
 
-### Where to Find
+Do not use fixed labels such as "3x means bulls control the market" without asset-specific validation.
 
-- CoinGlass (coinglass.com) — real-time ETF flow tracker
-- SoSoValue — daily ETF flow summaries
-- Bloomberg Terminal — institutional grade (if available)
+### Trend Proxy
 
-### Key Pattern: "Outflow Exhaustion"
+A seven-day return is a trend filter only. Combining a positive return with bid-side depth produces the skill's `market_structure_proxy`; it does not become institutional-flow data by combination.
 
-When ETF outflows have persisted for 3+ weeks and then suddenly reverse with a large single-day inflow (>$200M), this often marks a bottom. Smart money has finished selling and is starting to re-accumulate.
+## External Institutional Evidence
 
----
+ETF flows, exchange reserves, whale wallets, NUPL, funding, and open interest require separate attributable sources. For every claim:
 
-## Signal 2: Whale Accumulation (On-Chain)
+1. Open the actual source page or API response.
+2. Record its publication timestamp and measurement window.
+3. Distinguish reported values from interpretation.
+4. Check whether the source is primary, derived, delayed, or estimated.
+5. Omit the signal when the source cannot be verified.
 
-### Exchange Reserves
+Never claim that the bundled Binance scripts fetched ETF, wallet, exchange-reserve, or institutional-position data. They do not.
 
-| Indicator | Interpretation |
-|:---|:---|
-| Exchange BTC reserves decreasing | 🟢 Whales withdrawing to cold storage (bullish) |
-| Exchange BTC reserves increasing | 🔴 Whales depositing to sell (bearish) |
-| Exchange reserves at multi-year low | 🟢 Supply squeeze incoming |
+## Combining Evidence
 
-### Whale Wallet Tracking
+Use the bundled checklist's three canonical outcomes:
 
-| Behavior | Interpretation |
-|:---|:---|
-| Wallets >1000 BTC increasing count | 🟢 New whales entering |
-| Wallets >1000 BTC net buying >10K BTC/week | 🟢 Heavy accumulation |
-| Wallets >1000 BTC sending to exchanges | 🔴 Distribution phase |
+- `pass`: the measured condition meets its configured rule and evidence is fresh.
+- `caution` or `blocked`: stop active buying.
+- `unknown`: data is missing, stale, invalid, or unverifiable; stop active buying.
 
-### NUPL (Net Unrealized Profit/Loss)
-
-| NUPL Value | Phase | Signal |
-|:---:|:---|:---|
-| < 0 | Capitulation | 🟢 Extreme buy zone |
-| 0 - 0.25 | Hope / Fear | 🟡 Accumulation zone |
-| 0.25 - 0.5 | Optimism | 🟡 Hold zone |
-| 0.5 - 0.75 | Belief / Greed | ⚠️ Start taking profits |
-| > 0.75 | Euphoria | 🔴 Extreme sell zone |
-
----
-
-## Signal 3: Order Book Analysis
-
-### Bid/Ask Ratio
-
-The ratio of total buy orders (bids) to total sell orders (asks) in the order book:
-
-| Ratio | Interpretation |
-|:---:|:---|
-| > 3.0x | 🟢 Extreme buying pressure — bulls in full control |
-| 1.5 - 3.0x | 🟢 Buyers dominate — bullish |
-| 0.8 - 1.5x | 🟡 Balanced — neutral |
-| 0.3 - 0.8x | 🔴 Sellers dominate — bearish |
-| < 0.3x | 🔴 Extreme selling pressure — bears in control |
-
-### Iceberg Orders (Hidden Smart Money)
-
-Smart money often uses "iceberg orders" — large orders that are hidden from the visible order book. Signs of iceberg orders:
-
-1. **Price stability despite visible sell pressure**: If the order book shows 5x more sell orders than buy orders, but the price isn't dropping, someone is absorbing all the selling with hidden buy orders.
-2. **Consistent small fills at the same price**: The same price level keeps getting bought, even after each trade. This is an iceberg order refilling.
-3. **Sudden order book flip**: Before a major data release, the visible sell wall disappears and a massive buy wall appears within seconds. This is smart money revealing their hand.
-
----
-
-## Signal 4: Taker Buy/Sell Volume
-
-### What is Taker Volume?
-
-- **Taker buy** = someone actively buying at the market price (hitting the ask)
-- **Taker sell** = someone actively selling at the market price (hitting the bid)
-
-### Interpretation
-
-| Net Taker Flow | Price Direction | Signal |
-|:---|:---|:---|
-| Net buy + Price rising | Up | 🟢 Healthy trend continuation |
-| Net buy + Price flat | Flat | 🟡 Accumulation (needs confirmation) |
-| Net sell + Price falling | Down | 🔴 Distribution / selloff |
-| **Net sell + Price STABLE** | **Flat** | **🟢 STRONGEST BUY SIGNAL — smart money absorbing retail panic** |
-| Net buy + Price falling | Down | 🔴 Fake buying (distribution) |
-
-### The Golden Divergence
-
-The most powerful signal is when retail is net selling but the price refuses to drop. This means:
-
-1. Retail traders are panic selling (visible in Taker sell volume)
-2. But smart money is absorbing every sell with hidden buy orders
-3. Once retail selling is exhausted, smart money stops absorbing and starts aggressively buying
-4. Price explodes upward as there are no more sellers
-
-**This divergence pattern has preceded every major BTC rally in 2024-2026.**
-
----
-
-## How to Combine All Signals
-
-### Full Bullish Confluence (Highest Confidence)
-
-All four signals align bullish:
-- ✅ ETF inflows positive for 3+ days
-- ✅ Whale wallets accumulating, exchange reserves declining
-- ✅ Order book bid/ask ratio > 1.5x
-- ✅ Taker volume shows retail selling but price stable
-
-**Action**: Execute right-side entry with standard position size.
-
-### Partial Bullish (Medium Confidence)
-
-3 of 4 signals bullish:
-**Action**: Execute with half position size. Set wider stop-loss.
-
-### Mixed Signals (Low Confidence)
-
-2 or fewer signals bullish:
-**Action**: Do not trade. Wait for more clarity.
-
-### Full Bearish Confluence (Highest Risk)
-
-All four signals bearish:
-- ❌ ETF outflows for 5+ days
-- ❌ Whales sending to exchanges
-- ❌ Order book shows extreme sell pressure
-- ❌ Taker volume shows aggressive selling AND price dropping
-
-**Action**: Do NOT buy. Consider reducing speculative positions (but keep core positions per Rule 1).
+No number of proxy signals overrides missing macro/news evidence. A correlation observed in historical data is not proof of future price direction.

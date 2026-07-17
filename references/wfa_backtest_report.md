@@ -5,12 +5,12 @@
 
 ---
 
-## Executive Summary & Verdict
+## Executive Summary & Research Status
 
-This report presents a rigorous walk-forward validation of the **Integrated Sentiment & Momentum DCA Strategy** (running daily on BTC/USDT spot data). To eliminate data-snooping bias and verify the strategy's robustness under real market conditions, we subjected the model to a 15-window Walk-Forward Analysis (WFA). 
+This report records an exploratory walk-forward analysis of the **Integrated Sentiment & Momentum DCA Strategy**. It is retained for reproducibility and hypothesis generation; it does not eliminate every source of data-snooping or execution bias.
 
-### 🟢 Deployment Verdict: APPROVED (WITH CAUTION)
-The strategy is **robust and ready for live deployment** under a controlled pilot phase. It successfully minimizes the core hazard of quantitative backtesting—overfitting—and demonstrates outstanding capital efficiency, achieving an out-of-sample ROI that matches its in-sample optimization while slashing drawdowns by over **70%** compared to naive DCA benchmarks.
+### Research Verdict: NOT LIVE-DEPLOYMENT APPROVAL
+The results require a rerun with next-period execution, fees, slippage, equal-risk benchmark normalization, immutable data snapshots, and an untouched holdout before they can support deployment. The current live order guardrails do not consume this report as permission to trade.
 
 ---
 
@@ -114,7 +114,7 @@ To prove its worth, the WFA strategy must outperform naive benchmark counterpart
 
 ---
 
-## 5. Robustness & Live Deployment Verdict
+## 5. Robustness Gaps and Research Verdict
 
 ### Risk Analysis & Mitigations
 
@@ -125,14 +125,15 @@ While the backtest results are highly favorable, transition to live deployment i
    * *Mitigation:* A fail-safe baseline daily DCA (e.g., $10/day) should remain active to guarantee base accumulation regardless of volatility.
 2. **Execution Friction & Slippage:**
    * *Risk:* Real-world limit order fills on volatile dips may suffer from partial fills or slippage.
-   * *Mitigation:* Deploy ATR-based dynamic limit spacing (`limit = open - K * ATR`) as implemented in the advanced execution engine, allowing the system to place orders in order books at calculated support levels rather than chasing market orders.
+   * *Required research:* Add explicit fees, slippage, partial-fill assumptions, and next-period execution before comparing results.
 3. **Funding Rate & Leverage Spikes:**
    * *Risk:* Market crashes accompanied by negative funding rates can lead to prolonged cascades.
-   * *Mitigation:* Retain the "Funding Rate Cooldown Filter" in `execute_dca_advanced.py`, preventing buying when open interest is excessively levered to avoid catching falling knives.
+   * *Required research:* Define and validate an attributable funding/open-interest data source before treating this as a filter.
 
-### Verdict & Next Steps
+### Research Next Steps
 
-Based on the quantitative validation:
-1. **Phase 1 (Sandbox Testing - Done):** Backtest and WFA validation completed successfully.
-2. **Phase 2 (Pilot Live Deployment - Recommended):** Deploy the strategy using `execute_dca_advanced.py` with **10% of standard capital allocation** for 90 days (1 full out-of-sample window equivalent).
-3. **Phase 3 (Scale-up):** If live metrics match the WFA parameters (ROI/DD deviation < 5%), scale allocation to 100% of standard DCA targets.
+1. Freeze and hash the input datasets, including exact publication timestamps.
+2. Execute signals on the next tradable period with fees and conservative slippage.
+3. Compare strategies under equal cash deployment and equal risk budgets.
+4. Reserve a new untouched holdout period and publish complete trade-level output.
+5. Keep the result disconnected from live-order permission until those checks pass.

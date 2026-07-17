@@ -33,53 +33,20 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 
 
-DATA_DIR = Path(r"d:\money\spot_gems\data")
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT_DIR / "data"
 
 
 
 
 
-import ccxt
-
-import json
-
-
-
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "new222" / "config.json"
+from trader_runtime import create_exchange as create_public_exchange, load_config
+from order_safety import SafetyError, validate_checklist
 
 
 
 def create_exchange():
-
-    cfg = json.load(open(CONFIG_PATH))
-
-    ex = ccxt.binance({
-
-        "apiKey": cfg["api_key"],
-
-        "secret": cfg["api_secret"],
-
-        "enableRateLimit": True,
-
-        "timeout": 30000,
-
-        "options": {
-
-            "defaultType": "spot",
-
-            "adjustForTimeDifference": True,
-
-            "recvWindow": 60000,
-
-        },
-
-    })
-
-    if cfg.get("proxy"):
-
-        ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-
-    return ex
+    return create_public_exchange(private=False)
 
 
 
@@ -552,6 +519,19 @@ def compute_conviction(symbol="BTCUSDT"):
 
         size = "$0"
 
+    checklist_symbol = symbol[:-4] + "/USDT" if symbol.endswith("USDT") else symbol
+    try:
+        config = load_config()
+        checklist = validate_checklist(
+            checklist_symbol,
+            max_age_minutes=float(config.get("checklist_ttl_minutes", 15)),
+        )
+        gate = f"PASS ({checklist['checked_at_utc']})"
+    except (SafetyError, OSError, ValueError) as exc:
+        gate = f"BLOCKED ({exc})"
+        action = "BLOCKED - CHECKLIST REQUIRED"
+        size = "$0"
+
 
 
     # Display
@@ -599,6 +579,8 @@ def compute_conviction(symbol="BTCUSDT"):
     print(f"\n  {'=' * 50}")
 
     print(f"  TOTAL SCORE:  {total:.1f} / 10")
+
+    print(f"  CHECKLIST:    {gate}")
 
     print(f"  ACTION:       {action}")
 

@@ -19,37 +19,18 @@ import numpy as np
 import requests
 import ccxt
 
+from trader_runtime import ROOT_DIR, create_exchange as create_public_exchange, state_dir
+
 # Ensure stdout handles UTF-8 correctly
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # Configuration paths
-SCRATCH_DIR = Path("d:/money/scratch")
+SCRATCH_DIR = ROOT_DIR / ".cache"
 SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
 BTC_CACHE_FILE = SCRATCH_DIR / "btc_daily_candles_wfa.json"
 FNG_CACHE_FILE = SCRATCH_DIR / "fng_daily_data_wfa.json"
-CONFIG_PATH = Path("d:/money/new222/config.json")
-
 def create_exchange():
-    if CONFIG_PATH.exists():
-        try:
-            cfg = json.load(open(CONFIG_PATH))
-            ex = ccxt.binance({
-                "apiKey": cfg.get("api_key", ""),
-                "secret": cfg.get("api_secret", ""),
-                "enableRateLimit": True,
-                "timeout": 30000,
-                "options": {
-                    "defaultType": "spot",
-                    "adjustForTimeDifference": True,
-                    "recvWindow": 60000,
-                },
-            })
-            if cfg.get("proxy"):
-                ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-            return ex
-        except Exception as e:
-            print(f"Warning: Failed to initialize CCXT with config.json: {e}. Using default.")
-    return ccxt.binance({"enableRateLimit": True})
+    return create_public_exchange(private=False)
 
 def load_btc_data():
     """Load daily BTC/USDT data, using cache if available, otherwise fetch from Binance."""
@@ -564,7 +545,7 @@ def main():
     print("="*90)
     
     # Save output to file
-    out_file = Path("C:/Users/menger/.gemini/antigravity/brain/2c2583a9-b347-4628-9fe2-3c2451151d84/scratch/wfa_results.txt")
+    out_file = state_dir() / "wfa_results.txt"
     out_file.parent.mkdir(parents=True, exist_ok=True)
     
     with open(out_file, "w", encoding="utf-8") as f:

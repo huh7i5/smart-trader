@@ -1,265 +1,129 @@
 ---
 name: crypto-smart-trader
-description: >-
-  Cryptocurrency and bStock (tokenized US stocks) spot trading system with
-  smart money tracking, fund flow analysis, and strict discipline rules.
-  Designed for small retail investors ($1K-$10K) on Binance spot market.
-  Use when the user asks to check portfolio, analyze fund flows, place trades,
-  check smart money signals, run pre-trade checklist, manage positions, or
-  asks about crypto/stock trading strategy. Trigger phrases include:
-  "check portfolio", "fund flow", "smart money", "buy BTC", "sell position",
-  "pre-trade check", "交易前检查", "查看持仓", "资金流向", "聪明钱",
-  "买入", "卖出", "挂单", "定投计划", "仓位管理", "止损", "止盈".
+description: Evidence-backed Binance Spot and bStocks trading assistant for live market rankings, portfolio checks, taker-flow analysis, pre-trade validation, guarded order proposals, position sizing, and DCA planning. Use for Binance spot questions such as current rankings, top gainers/losers, bStocks lists, "什么情况", "BN/Binance 排行榜", "查看持仓", "资金流向", "交易前检查", "买入", "卖出", "挂单", "定投计划", "仓位管理", "止损", or "止盈". Do not use for futures, leverage, DeFi, tax, or fully autonomous trading.
 ---
 
 # Crypto Smart Trader
 
-A disciplined, data-driven trading system for cryptocurrency and bStock (Binance tokenized US stocks) spot markets. Built around a **3-Point Pre-Trade Checklist** that combines smart money analysis, retail behavior tracking, and macro event awareness to ensure every trade decision is backed by evidence — not emotion.
+Use this skill as a decision-support system for Binance Spot. Never represent it as financial advice or a guarantee of profit.
 
-> [!CAUTION]
-> ## Disclaimer
-> This skill is for **educational and informational purposes only**. It does NOT constitute financial advice. Cryptocurrency and stock trading involves substantial risk of loss. Never invest more than you can afford to lose.
+## Non-Negotiable Truth Protocol
 
-## When to use
+Apply these rules before every live-market answer:
 
-- User wants to check their current portfolio holdings and P&L
-- User asks about current market prices or trends
-- User wants to analyze fund flows (smart money vs retail)
-- User wants to place a buy or sell order on Binance
-- User asks about position sizing or risk management
-- User wants to run a pre-trade checklist before making a decision
-- User is planning a DCA (dollar cost averaging) strategy
-- User asks about macro events (CPI, FOMC, earnings) impact on trades
+1. Run a bundled script for every claim about current prices, rankings, available symbols, volume, fund flow, portfolio state, or checklist status.
+2. Never answer current-market questions from memory, prior chat messages, a hardcoded symbol list, or model intuition.
+3. Treat missing, malformed, empty, or stale script output as `DATA_UNAVAILABLE`. State the failure plainly and do not fill gaps with plausible values.
+4. Include `fetched_at_utc`, the data source, the number of markets/records, and the evidence file path in the answer.
+5. Treat market evidence older than five minutes as stale and rerun it.
+6. Never call a two-point scan "fully green". A trade verdict requires all three checks, including verified macro/news evidence.
+7. Never invent URLs, article titles, Binance announcements, rankings, fills, balances, or API results.
 
-## When NOT to use
+These rules override conversational helpfulness. A truthful failure is better than a fluent hallucination.
 
-- Futures or leverage trading (this skill is spot-only)
-- DeFi protocols, yield farming, or liquidity pools
-- NFT trading or minting
-- Tax preparation or accounting (consult a professional)
-- Automated bot trading (this is a manual decision-support system)
+## Live Ranking Workflow
 
-## Related files
-
-| File | Open when |
-|------|-----------|
-| [references/user_profile.md](references/user_profile.md) | **Always read first** — User's trading personality, habits, FOMO triggers, order preferences, and communication style |
-| [references/integrated_strategy.md](references/integrated_strategy.md) | User wants to understand or optimize the integrated Sentiment & Momentum strategy (Model 1/2/3 parameters, backtest results) |
-| [references/wfa_backtest_report.md](references/wfa_backtest_report.md) | User wants to inspect the true out-of-sample Walk-Forward Analysis (WFA) results and overfitting decay analysis |
-| [references/baseline_booster_strategy.md](references/baseline_booster_strategy.md) | User wants to combine baseline DCA (never miss trend) with checklist-enforced dynamic booster buying |
-| [references/trading_rules.md](references/trading_rules.md) | User asks about trading discipline, rules, or risk management |
-| [references/position_sizing.md](references/position_sizing.md) | User asks about how much to invest, batch sizing, or DCA planning |
-| [references/smart_money_signals.md](references/smart_money_signals.md) | User asks about smart money, whale activity, or fund flow interpretation |
-| [references/macro_calendar.md](references/macro_calendar.md) | User asks about upcoming events (CPI, FOMC, earnings) or when to trade |
-| [references/star_rating_guide.md](references/star_rating_guide.md) | User asks about conviction score star ratings, scores, or buy timing recommendations |
-| [examples/dca_plan_example.md](examples/dca_plan_example.md) | User wants a concrete DCA plan template |
-| [examples/pre_trade_report_example.md](examples/pre_trade_report_example.md) | User wants to see what a pre-trade report looks like |
-
-## Pre-Trade Checklist (The 3-Point Check)
-
-**This is the core methodology. Before EVERY trade, run all 3 checks. Only proceed when all pass (🟢🟢🟢).**
-
-### ① Smart Money Direction
-
-Check what institutional investors and whales are doing:
-
-- **ETF fund flows**: Are Bitcoin/Ethereum ETFs seeing net inflows or outflows this week?
-- **Whale accumulation**: Are large holders (>1000 BTC) adding to positions?
-- **Exchange reserves**: Are coins leaving exchanges (bullish) or entering (bearish)?
-
-Run: `python ${SKILL_DIR}/scripts/check_fund_flow.py --hours 24`
-
-### ② Retail Behavior
-
-Analyze what small traders are doing in the short term:
-
-- **Taker buy/sell volume**: Is retail net buying or selling in the last 6 hours?
-- **Order book depth**: Is the bid wall bigger than the ask wall?
-- **Key signal**: Retail selling + price stable = smart money absorbing (bottom signal)
-
-Run: `python ${SKILL_DIR}/scripts/check_fund_flow.py --hours 6`
-
-### ③ Macro Events
-
-Check the economic calendar and sector news for upcoming volatility triggers:
-
-- **Within 24 hours**: CPI, FOMC, jobs data → DO NOT TRADE
-- **Within 48 hours**: Earnings, IPOs → PROCEED WITH CAUTION
-- **Clear calendar**: SAFE TO TRADE
-- **Live News Check (Mandatory)**: Running the script is NOT enough for bStocks (GOOGLB, NVDAB, DRAMB) or specific sector coins (e.g. AI, SOL ecosystem). The AI **must** use the `search_web` tool to search for sector news, company earnings, or regulatory updates from the past 48 hours. Any critical negative news counts as a 🔴 CAUTION, overriding a script-based PASS.
-
-Run: `python ${SKILL_DIR}/scripts/pre_trade_checklist.py`
-
-### Decision Matrix (All 8 Combinations)
-
-| ① Smart Money | ② Retail | ③ Macro | Decision |
-|:---:|:---:|:---:|:---|
-| 🟢 | 🟢 | 🟢 | ✅ Execute trade |
-| 🟢 | 🟢 | 🔴 | ⏸️ Wait for event to pass |
-| 🟢 | 🔴 | 🟢 | ✅ Execute (retail panic = opportunity)* |
-| 🟢 | 🔴 | 🔴 | ⏸️ Wait for event to pass (retail panic + macro risk) |
-| 🔴 | 🟢 | 🟢 | ⏸️ Wait for smart money confirmation |
-| 🔴 | 🟢 | 🔴 | ❌ Do not trade (smart money bearish + macro risk) |
-| 🔴 | 🔴 | 🟢 | ❌ Do not trade (smart money + retail both bearish) |
-| 🔴 | 🔴 | 🔴 | ❌ Absolutely do not trade |
-
-> **\*** **bStock caveat for Row 3 (🟢🔴🟢):** For bStocks (DRAMB, NVDAB, GOOGLB), retail selling may reflect informed company/sector-specific news rather than irrational panic. Always verify Step 2.5 (Live News Search) before treating bStock retail selling as a buy opportunity.
-
-## Integrated Sentiment & Momentum Models
-
-To optimize entry prices and capital efficiency, the system integrates three execution models. **All models are bound by the One-Red-Stop (Checklist) Rule and only execute when the Pre-Trade Checklist is fully Green (🟢🟢🟢).**
-
-### Model 1: Sentiment-Weighted DCA
-*   **Purpose**: Dynamically scale purchase sizes based on market fear/euphoria.
-*   **Logic**: Scales up purchases up to 3.0x base size when F&G <= 15 (Extreme Fear) and RSI <= 25 (Extreme Oversold). Scales down to 0.5x when market shows greed.
-*   **Optimized Parameters**: `FNG_LOW = 15`, `FNG_HIGH = 30`, `RSI_LOW = 25`, `RSI_HIGH = 40`.
-
-### Model 2: Momentum Sniper (Trigger)
-*   **Purpose**: Capture bottom inflections while avoiding catching falling knives.
-*   **Logic**: Triggers a standard buy only when Checklist is Green **AND** Daily/4h RSI crosses back above 30 from oversold, or a bullish divergence is confirmed on price and RSI.
-*   **Optimized Parameters**: `RSI_CROSS_TH = 30`, `RSI_DIV_LIMIT = 35`.
-
-### Model 3: Volatility Dip Buyer (Mean Reversion)
-*   **Purpose**: Buy extreme capitulation wicks at key historical support zones.
-*   **Logic**: Triggers a volatility-scaled purchase when price touches the lower Bollinger Band during high fear (F&G <= 35).
-*   **Optimized Parameters**: `REQUIRE_FNG_M3 = 35`, `USE_VOL_DECLINE = False` (volatility contraction is not required during high-fear band breaches).
-
-For complete backtest evidence and parameter details, see [references/integrated_strategy.md](references/integrated_strategy.md).
-
-## Trading Discipline (6 Iron Rules)
-
-1. **Never sell core positions in panic** — Bottom is where you feel most scared. If the thesis hasn't changed, the position stays.
-2. **Never chase pumps** — If an asset has risen >5% today, do NOT buy. Wait for a pullback or next entry opportunity.
-3. **Wait for confirmation** — Before major data releases (CPI, FOMC), do NOT place new orders. Wait for the data, then decide.
-4. **Cap each trade at 6-12% of capital** — Maximum $50-$100 per single trade for a $1,000 account. Spread entries across multiple tranches.
-5. **Always maintain 30%+ cash reserve** — Cash is ammunition. Without it, you can't capitalize on crashes. Never go all-in.
-6. **Never override the Pre-Trade Checklist verdict (One-Red-Stop Rule)** — If Smart Money or Retail Flow shows red (🔴 CAUTION), do NOT buy under any circumstances. Hype does not beat actual flow.
-   - **Exception — Shield (Baseline DCA) mode only**: The weekly small-amount baseline DCA (see [baseline_booster_strategy.md](references/baseline_booster_strategy.md)) is exempt from this rule because its purpose is to guarantee minimum accumulation regardless of market conditions. The Booster (Spear) mode is **never** exempt.
-
-## User Behavioral Awareness
-
-The AI assistant must be aware of the user's behavioral patterns to provide effective guardrails:
-
-- **No Flattery & Absolute Objectivity**: Never flatter, praise, or validate the user's opinions out of politeness. Provide cold, objective, data-driven analysis. If the user proposes a view, dissect it critically, highlight the risks, and present the counter-arguments.
-- **FOMO Detection**: When the user shows excitement about news/earnings (e.g., "好机会", "要起飞", "赶紧加仓"), ALWAYS run the checklist FIRST before engaging. If red, firmly push back.
-- **Overtrading Detection**: If the user requests >2 order modifications within 1 hour (cancel + re-place + change type), flag it as potential overtrading and recommend stepping away from the screen.
-- **Limit Orders First**: Always propose limit buy orders at recent lows, never market orders, unless the user explicitly requests market execution.
-- **Cost Basis Transparency**: Before any buy, show the current average cost and the projected new average cost after the trade.
-- **Privacy Guard**: Never expose personal info (username, paths, API keys, exact portfolio totals) in any public-facing output.
-
-> [!IMPORTANT]
-> For the full behavioral profile, read [references/user_profile.md](references/user_profile.md) at the start of every new conversation.
-
-## Workflow
-
-### Step 1 · Check Current Portfolio
-
-Run the portfolio checker to see current holdings, open orders, and account value:
+For "排行榜", "涨幅榜", "跌幅榜", "成交量榜", "有哪些 bStocks", "什么情况", or similar requests:
 
 ```bash
-python ${SKILL_DIR}/scripts/check_portfolio.py
+python ${SKILL_DIR}/scripts/binance_market_scan.py --category bstock --limit 10 --json
 ```
 
-### Step 2 · Run Pre-Trade Checklist
+Use `--category crypto` for crypto only and `--category all` for every Binance Spot USDT market. Verify all of the following before reporting results:
 
-Before any trade decision, run the automated 3-point check:
+- `status` equals `ok`.
+- `market_count` is greater than zero.
+- `fetched_at_utc` is within five minutes.
+- `source.exchange_info`, `source.ticker_24h`, and `source.product_tags` are present.
+
+The script discovers bStocks dynamically from Binance's `bStocks` product tag and intersects them with currently trading Spot markets. Do not maintain or quote a manual bStock count.
+
+## Current Market Workflow
+
+When the user asks "什么情况" or "现在呢":
+
+1. Run `check_prices.py` for held or requested symbols.
+2. Run `binance_market_scan.py` when relative market position or rankings matter.
+3. Run `check_fund_flow.py` for actual Binance taker-buy volume and visible order-book depth.
+4. If private credentials are configured, run `check_portfolio.py` when holdings or cash affect the answer.
+5. Separate measured facts from interpretation. Label order-book/trend logic as a proxy, never as proof of institutional activity.
+
+## Pre-Trade Workflow
+
+Apply this sequence to every active or booster buy:
+
+1. Read [references/user_profile.md](references/user_profile.md). If a local `user_profile.local.json` exists, use it without exposing it.
+2. Fetch current price, market ranking context, and taker flow with bundled scripts.
+3. Use an available web search or browser tool to open current macro, company, sector, security, and regulatory sources. Do not rely on snippets alone.
+4. Save reachable source URLs as evidence. A `clear` verdict requires at least two independent sources:
 
 ```bash
-python ${SKILL_DIR}/scripts/pre_trade_checklist.py --symbol BTC/USDT
+python ${SKILL_DIR}/scripts/macro_evidence.py --symbol BTC --status clear \
+  --source "https://source-one.example/article" \
+  --source "https://source-two.example/calendar" \
+  --note "No material event found in the next 48 hours"
 ```
 
-### Step 2.5 · Live News Search (Mandatory)
-
-**The script alone is NOT sufficient.** The AI must use `search_web` to check for sector-specific news from the past 48 hours. This is especially critical for:
-- **bStocks** (DRAMB, NVDAB, GOOGLB): Search for earnings, analyst downgrades, competitor IPOs, trade policy changes.
-- **Sector coins** (SOL ecosystem, AI tokens): Search for protocol exploits, token unlocks, regulatory actions.
-- **BTC/ETH**: Search for ETF flow data, exchange hacks, stablecoin depegs.
-
-If any material negative news is found, override the script's Macro PASS to 🔴 CAUTION.
-
-### Step 2.75 · Run Conviction Score (Optional)
-
-If the checklist passes (🟢🟢🟢), optionally run the conviction scorer for a star rating:
+5. Run the checklist:
 
 ```bash
-python ${SKILL_DIR}/scripts/conviction_score.py --symbol BTC
+python ${SKILL_DIR}/scripts/pre_trade_checklist.py --symbol BTC/USDT --json
 ```
 
-### Step 3 · Analyze Fund Flows
-
-Get detailed fund flow data to understand market dynamics:
-
-```bash
-python ${SKILL_DIR}/scripts/check_fund_flow.py --hours 6
-```
-
-### Step 4 · Execute Trade (User Confirmation Required)
-
-**Always confirm with the user before executing.** Present the trade details and wait for explicit "execute" command.
+6. Stop if `all_pass` is false, any check is not `pass`, evidence is stale, or a tool failed. Macro/news `unknown` is a hard stop.
+7. Optionally run `conviction_score.py` only after the checklist passes. A score never overrides a failed checklist.
+8. Calculate size, cash reserve, and projected cost basis. Propose a limit order first.
+9. Generate a preview. Do not execute in the same conversational step:
 
 ```bash
-# Market buy
-python ${SKILL_DIR}/scripts/buy_market.py BTC 50
-
-# Limit buy
 python ${SKILL_DIR}/scripts/buy_limit.py BTC 58800 50
-
-# Market sell
-python ${SKILL_DIR}/scripts/sell_market.py DRAMB --all
 ```
 
-### Step 5 · Verify Execution
-
-After any trade, re-run the portfolio checker to confirm the order was filled:
+10. Show the exact symbol, side, type, price, quantity, USDT amount, current/projected cost, reserve impact, checklist time, and proposal expiry. Wait for a new explicit user confirmation.
+11. Only after explicit confirmation, execute the unchanged proposal with its token:
 
 ```bash
-python ${SKILL_DIR}/scripts/check_portfolio.py
+python ${SKILL_DIR}/scripts/buy_limit.py BTC 58800 50 --confirm PROPOSAL_TOKEN
 ```
 
-## Position Sizing Quick Reference
+12. Run `check_portfolio.py` to verify the resulting order or fill. Never claim success from command submission alone.
 
-| Account Size | Max Per Trade | Cash Reserve | Tranches |
-|:---:|:---:|:---:|:---:|
-| $1,000 | $50-$100 | $300+ | 3-4 batches |
-| $5,000 | $250-$500 | $1,500+ | 4-5 batches |
-| $10,000 | $500-$1,000 | $3,000+ | 5-6 batches |
+## Canonical Decision Rule
 
-## Available Scripts
+For active and booster buys, only `PASS + PASS + PASS` permits an order proposal. Any `caution`, `blocked`, `unknown`, missing data, or script error means do not trade.
 
-| Script | Purpose |
-|--------|---------|
-| `${SKILL_DIR}/scripts/check_portfolio.py` | View holdings, P&L, open orders |
-| `${SKILL_DIR}/scripts/check_prices.py` | Real-time price monitoring |
-| `${SKILL_DIR}/scripts/check_fund_flow.py` | Short-term fund flow analysis |
-| `${SKILL_DIR}/scripts/pre_trade_checklist.py` | Automated 3-point pre-trade check |
-| `${SKILL_DIR}/scripts/conviction_score.py` | Multi-factor conviction star rating |
-| `${SKILL_DIR}/scripts/buy_market.py` | Execute market buy orders |
-| `${SKILL_DIR}/scripts/buy_limit.py` | Place limit buy orders |
-| `${SKILL_DIR}/scripts/sell_market.py` | Execute market sell orders |
-| `${SKILL_DIR}/scripts/cancel_order.py` | Cancel open orders |
-| `${SKILL_DIR}/../core/stop_loss.py` | Place conditional stop-loss limit orders |
-| `${SKILL_DIR}/../spot_gems/execute_dca_advanced.py` | Advanced DCA execution with ATR limit spacing (Shield+Spear) |
+Baseline DCA is the only checklist exception. Use `--mode baseline` only when the user explicitly requests the pre-agreed baseline schedule. It still requires risk checks, a preview token, a separate confirmation, and code-enabled live trading. Never silently reinterpret an active buy as baseline DCA.
 
-> [!WARNING]
-> ## Legacy Scripts Warning
-> The `spot_gems/daily_check.py` script produces automated `!! stop_loss SELL` and `++ dca BUY` signals based on pure mathematical formulas (ATR trailing stop, percentage drawdown). **These signals must NEVER be directly executed.** They must be filtered through the Pre-Trade Checklist (Step 2) and Live News Search (Step 2.5) before any action is taken. The `daily_check.py` signals are useful as *alerts* to draw your attention, but the final decision authority belongs to the 3-Point Checklist + News Search pipeline.
+## Hard Execution Guardrails
 
-## Output Format
+- Live trading is disabled by default in `config.json`.
+- Every order and cancellation is preview-only on the first command.
+- Proposal tokens expire and are single use.
+- Active buys require a recent all-pass checklist artifact for the exact symbol.
+- Code enforces the configured per-trade cap and minimum USDT reserve.
+- Full sale of configured core assets is disabled by default.
+- Prefer limit buys. Use market buys only when the user explicitly requests them after seeing slippage risk.
+- Never grant API withdrawal, futures, or margin permissions. Recommend IP restrictions and a dedicated Spot-only key.
 
-### Portfolio Report
+## Research and Strategy References
+
+- Read [references/data_sources.md](references/data_sources.md) before changing live data semantics or ranking logic.
+- Read [references/trading_rules.md](references/trading_rules.md) for behavioral and risk rules.
+- Read [references/position_sizing.md](references/position_sizing.md) for allocation planning.
+- Read [references/baseline_booster_strategy.md](references/baseline_booster_strategy.md) for baseline versus booster modes.
+- Read [references/integrated_strategy.md](references/integrated_strategy.md) and [references/wfa_backtest_report.md](references/wfa_backtest_report.md) only for research context. Historical backtests are not live deployment approval.
+
+## Response Contract
+
+For live data, finish with a compact provenance block:
+
+```text
+DATA PROVENANCE
+Fetched: <UTC timestamp>
+Sources: <actual endpoints/pages opened>
+Records: <market or result count>
+Evidence: <local JSON artifact>
+Limitations: <proxy, stale, unavailable, or coverage notes>
 ```
-CURRENT HOLDINGS & VALUE
-  BTC      qty=0.00693  price=65348.00  value=452.85 USDT
-  SOL      qty=3.397    price=78.09     value=265.28 USDT
-  USDT: free=$759.86 | locked=$49.98 | total=$809.84
-  Total account: ~1777.00 USDT
-```
 
-### Pre-Trade Checklist Report
-```
-📋 PRE-TRADE CHECKLIST
-  ① Smart Money Direction: 🟢 PASS
-  ② Retail Behavior (6h):  🟢 PASS
-  ③ Macro Events (next 48h): 🟢 PASS
-  VERDICT: ✅ ALL CLEAR — SAFE TO TRADE
-```
+Respond in Chinese unless the user requests another language. Keep exact portfolio values and local paths out of public-facing content.

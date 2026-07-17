@@ -20,14 +20,14 @@ To solve the conflict between **high precision (low drawdown)** and **sufficient
 │  (The Shield - 定投防守) │                       │  Booster (The Spear)    │
 └────────────┬────────────┘                       └────────────┬────────────┘
              │                                                 │
-      Always Executes                                   Executes Only If:
+   Creates Weekly Proposal                              Executes Only If:
    (BTC 45%, SOL 35%, LINK 20%)                       1. 3-Point Checklist = 🟢🟢🟢
    Small ticket size (e.g., $30)                      2. F&G <= 15 or RSI <= 25 (Model 1)
    50% Market / 50% ATR-Limit                         3. RSI crossback/div (Model 2/3)
                                                       Scales size dynamically (0.5x - 3.0x)
 ```
 
-1.  **The Shield (Baseline DCA):** Executes weekly on a fixed schedule regardless of checklist filters (unless extreme black swan halts are active). This guarantees steady accumulation of core assets. **This mode is explicitly exempt from Rule 6 (One-Red-Stop)** — see SKILL.md for the rationale.
+1.  **The Shield (Baseline DCA):** Creates a small weekly proposal regardless of checklist filters (unless extreme black swan halts are active). It never submits a live order automatically. **This mode is explicitly exempt from Rule 6 (One-Red-Stop)**, but still requires code risk checks and separate user confirmation.
 2.  **The Spear (Checklist Booster):** Executes dynamically when market capitulations occur, using our optimized WFA parameters to place heavy buy orders at deep cycle bottoms. **This mode is NEVER exempt from Rule 6** — all 3 checklist lights must be green (🟢🟢🟢) before the Spear fires.
 
 ---
@@ -35,14 +35,14 @@ To solve the conflict between **high precision (low drawdown)** and **sufficient
 ## 2. Execution Logic
 
 ### 2.1. Weekly Baseline DCA (The Shield)
-*   **Trigger:** Automated cron/timer execution every Monday at 08:00 UTC.
+*   **Trigger:** A scheduler may create a preview every Monday at 08:00 UTC. It must not confirm or submit the order.
 *   **Base Budget:** Small size (e.g., $30 to $50 total).
 *   **Asset Allocation:**
     *   BTC/USDT: 45%
     *   SOL/USDT: 35%
     *   LINK/USDT: 20%
 *   **Execution Method:**
-    *   **50% Market Buy:** Executed immediately to capture the baseline price.
+    *   **50% Market Buy Proposal:** Proposed at the current price and submitted only after confirmation.
     *   **50% ATR-based Limit Buy:** Placed at `Current Price - K * ATR(14)` (where $K = 2.0$ for BTC, $2.5$ for SOL/LINK) to secure a local discount. Unfilled limit orders expire and are cancelled after 24 hours.
 
 ### 2.2. Checklist Booster (The Spear)
@@ -68,13 +68,12 @@ To solve the conflict between **high precision (low drawdown)** and **sufficient
 
 ---
 
-## 4. Live Script Integration Plan
+## 4. Guarded Script Integration
 
-To implement this without breaking the existing SQLite transaction logging:
-1.  **Modify `execute_dca_advanced.py`**:
-    - Add a `--mode` argument taking either `baseline` or `booster`.
-    - `baseline` mode bypasses the Smart Money trend filters, executing the $30 allocation immediately.
-    - `booster` mode runs the full checklist and dynamic multipliers.
-2.  **Scheduler Setup**:
-    - Cron 1: Runs `execute_dca_advanced.py --mode baseline --budget 30` weekly.
-    - Cron 2 (or daily daemon): Runs `execute_dca_advanced.py --mode booster --budget 100` daily. It checks conditions and exits silently if no booster signal is active.
+Use the bundled order scripts rather than an external execution engine:
+
+1. Run `buy_limit.py SYMBOL PRICE AMOUNT --mode baseline` to create a baseline preview.
+2. Run the normal three-point workflow before an active or booster preview.
+3. Show the proposal to the user and wait for a separate explicit confirmation.
+4. Submit the unchanged command with `--confirm PROPOSAL_TOKEN` only after confirmation.
+5. Let schedulers create evidence and previews only. Never let a scheduler consume a proposal token.

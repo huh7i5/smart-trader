@@ -2,9 +2,19 @@
   "api_key": "YOUR_BINANCE_API_KEY",
   "api_secret": "YOUR_BINANCE_API_SECRET",
   "proxy": "",
+  "allow_live_trading": false,
+  "testnet": false,
   "risk_per_trade_pct": 10,
-  "max_cash_deploy_pct": 70,
   "min_cash_reserve_pct": 30,
+  "proposal_ttl_minutes": 10,
+  "checklist_ttl_minutes": 15,
+  "macro_evidence_ttl_hours": 6,
+  "allow_core_full_sell": false,
+  "core_symbols": [
+    "BTC/USDT",
+    "SOL/USDT",
+    "LINK/USDT"
+  ],
   "default_symbols": [
     "BTC/USDT",
     "SOL/USDT",

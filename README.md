@@ -1,200 +1,117 @@
-# Crypto Smart Trader 🎯
+# Crypto Smart Trader
 
-> A disciplined, data-driven trading system for cryptocurrency and bStock (Binance tokenized US stocks) spot markets.
+面向 Binance Spot 与 bStocks 的证据驱动交易辅助 skill。实时榜单、价格、资金流和交易结论必须来自脚本输出，不允许语言模型凭记忆补全。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+> 仅供研究和决策辅助，不构成投资建议。默认禁止真实下单；期货、杠杆、保证金和提现不在支持范围内。
 
-## Features
+## 核心改进
 
-- 📋 **3-Point Pre-Trade Checklist** — Smart money direction + retail behavior + macro events
-- 💰 **Fund Flow Analysis** — Track Taker buy/sell volume and order book depth
-- 📊 **Portfolio Management** — View holdings, P&L, open orders at a glance
-- 🛡️ **Risk Management** — Enforced position sizing, cash reserves, and batch entry
-- ⚡ **One-Command Trading** — Market buy, limit buy, market sell, cancel orders
-- 📅 **Macro Event Awareness** — CPI, FOMC, earnings season calendar
+- 动态读取 Binance 产品标签，不再手写 bStocks 名单。
+- 从 Binance Kline 的真实 taker-buy 字段计算买卖流，不再用蜡烛形状冒充资金流。
+- 每份实时报告包含 UTC 时间、数据源、记录数和本地证据 JSON。
+- 宏观/公司新闻缺少可验证 URL 时返回 `unknown`，主动交易直接停止。
+- 买入、卖出和撤单默认只生成预览；真实操作需要未过期的一次性 proposal token。
+- 代码强制执行单笔上限、现金储备、checklist 时效和核心仓位保护。
 
-## Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- Binance account with API keys
-- `ccxt` library
-
-### Installation
+## 安装
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/crypto-smart-trader.git
-cd crypto-smart-trader
-
-# Install dependencies
-pip install ccxt
-
-# Configure your API keys
-cp resources/config_template.json config.json
-# Edit config.json with your Binance API key and secret
+git clone https://github.com/huh7i5/smart-trader.git
+cd smart-trader
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+copy resources\config_template.json config.json
 ```
 
-### Usage
+Linux/macOS 使用 `source .venv/bin/activate` 和 `cp`。公共行情与榜单不需要 API Key；只有持仓和订单功能需要 Spot-only Key。禁止开启提现、期货、杠杆权限，建议配置 IP 白名单。
+
+`config.json` 默认：
+
+```json
+{
+  "allow_live_trading": false,
+  "testnet": false,
+  "risk_per_trade_pct": 10,
+  "min_cash_reserve_pct": 30
+}
+```
+
+在完成 testnet 验证前不要打开 `allow_live_trading`。
+
+## 真实 Binance 榜单
 
 ```bash
-# Check current prices
-python scripts/check_prices.py
+# 动态 bStocks 涨幅榜、跌幅榜、成交量榜
+python scripts/binance_market_scan.py --category bstock --limit 10
 
-# View your portfolio
-python scripts/check_portfolio.py
+# 加密货币榜单
+python scripts/binance_market_scan.py --category crypto --limit 10
 
-# Run pre-trade checklist before any trade
-python scripts/pre_trade_checklist.py --symbol BTC/USDT
+# 机器可读证据
+python scripts/binance_market_scan.py --category bstock --limit 10 --json
+```
 
-# Analyze fund flows
-python scripts/check_fund_flow.py --hours 6
+脚本实时联结 Binance `exchangeInfo`、24h ticker 和产品 `bStocks` 标签。接口失败或返回空集时退出非零状态，不会回退到手写名单。
 
-# Buy $50 of BTC at market price
-python scripts/buy_market.py BTC 50
+## 三点检查
 
-# Place a limit buy for BTC at $58,800
+先使用真实打开过的网页创建宏观/新闻证据：
+
+```bash
+python scripts/macro_evidence.py --symbol BTC --status clear ^
+  --source "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" ^
+  --source "https://example.com/actual-opened-market-news" ^
+  --note "未来 48 小时未发现重大负面事件"
+```
+
+然后运行：
+
+```bash
+python scripts/pre_trade_checklist.py --symbol BTC/USDT --json
+```
+
+只有三项全部 `pass` 才会生成 `trade_allowed`。没有宏观证据、证据过期、URL 不可访问或任何数据请求失败时均 fail closed。
+
+## 两阶段下单
+
+第一次命令只创建预览：
+
+```bash
 python scripts/buy_limit.py BTC 58800 50
-
-# Sell all DRAMB holdings
-python scripts/sell_market.py DRAMB --all
-
-# Cancel all open orders
-python scripts/cancel_order.py --all
 ```
 
-## The 3-Point Pre-Trade Checklist
-
-Before **every** trade, you MUST check:
-
-| Check | What to Look For | Tool |
-|:---:|:---|:---|
-| ① Smart Money | ETF flows, whale accumulation, exchange reserves | `check_fund_flow.py` |
-| ② Retail Behavior | Taker volume, order book depth, divergence signals | `check_fund_flow.py` |
-| ③ Macro Events | CPI, FOMC, earnings within 48 hours | `pre_trade_checklist.py` |
-
-**Only trade when all 3 checks pass (🟢🟢🟢).**
-
-## The 5 Iron Rules
-
-1. **Never sell core positions in panic**
-2. **Never chase pumps (>5% daily = don't buy)**
-3. **Wait for data before acting on releases**
-4. **Max 6-12% of capital per trade**
-5. **Always maintain 30%+ cash reserve**
-
-## Project Structure
-
-```
-crypto-smart-trader/
-├── SKILL.md              # AI agent skill definition
-├── README.md             # This file
-├── LICENSE               # MIT License
-├── scripts/              # Executable trading scripts
-│   ├── check_portfolio.py
-│   ├── check_prices.py
-│   ├── check_fund_flow.py
-│   ├── pre_trade_checklist.py
-│   ├── buy_market.py
-│   ├── buy_limit.py
-│   ├── sell_market.py
-│   └── cancel_order.py
-├── references/           # Documentation
-│   ├── trading_rules.md
-│   ├── position_sizing.md
-│   ├── smart_money_signals.md
-│   └── macro_calendar.md
-├── examples/             # Examples and templates
-│   ├── dca_plan_example.md
-│   └── pre_trade_report_example.md
-└── resources/            # Configuration templates
-    └── config_template.json
-```
-
----
-
-# 📖 中文说明
-
-## 这是啥
-
-这套交易工具是我个人**自己瞎摸索出来的**。本金不多（$1,700 左右），核心逻辑就是通过脚本去读取你的币安持仓、分析当前行情、然后跑一遍“三项检查”给出信心评分（⭐ 到 ⭐⭐⭐⭐⭐ 推荐度）。
-
-我把它开源出来，大家可以作为一个基础参考，去优化、改进、找到更适合你自己的交易策略。
-
-> [!IMPORTANT]
-> **这套工具是“半自动”的（决策辅助），不是“全自动”挂机机器人**。我自己害怕全自动机器人可能会因为网络波动、插针行情或者逻辑漏洞直接“玩脱”导致爆仓，所以最终的买卖执行依然需要你手动确认。
-
-## 核心怎么用？
-
-1. **申请币安 API**：去币安后台申请只读/现货交易权限的 API Key 和 Secret（**绝对不要开杠杆/合约/提现权限！**）。
-2. **填写配置**：把 API Key 填入 `config.json` 配置文件。
-3. **读取持仓**：运行脚本，它会去读你的“池塘”（持仓），把每个代币的市值和现金占比列出来。
-4. **分析行情**：跑“信心评分”和“三项检查”，它会结合最新的波动率、回撤深度和均线，给出现在的星级推荐。
-5. **手动下单**：如果分数很高（比如 4-5 星），你可以选择用买入脚本手动下一笔定投单。
-
-## 快速上手
+用户检查并在新的消息中明确确认后，才能使用原 proposal token：
 
 ```bash
-git clone https://github.com/yourusername/crypto-smart-trader.git
-cd crypto-smart-trader
-pip install ccxt
-cp resources/config_template.json config.json
-# 编辑 config.json，填入你的币安 API Key
-# 国内用户记得填 proxy 代理，比如 "http://127.0.0.1:7890"
+python scripts/buy_limit.py BTC 58800 50 --confirm PROPOSAL_TOKEN
 ```
 
-常用命令：
+修改价格、数量、symbol、方向或订单类型会使 token 不匹配。token 过期或已经使用也会被拒绝。市价买入、卖出和撤单遵循相同流程。
+
+## 常用命令
 
 ```bash
-python scripts/check_portfolio.py                       # 1. 读持仓（看你水池里有多少鱼和水）
-python scripts/pre_trade_checklist.py --symbol BTC/USDT # 2. 跑三项检查（看宏观和资金流）
-# 或者运行最新优化的评分脚本：
-python scripts/conviction_score.py BTC SOL LINK DOGE    # 3. 查看这几个币今天的星级和信心评分
-python scripts/buy_market.py BTC 50                     # 4. 手动确认：市价买入 $50 BTC
+python scripts/check_prices.py BTC SOL DRAMB NVDAB
+python scripts/check_fund_flow.py --hours 6 --symbols BTC DRAMB
+python scripts/check_portfolio.py
+python scripts/conviction_score.py BTC SOL
+python scripts/bulk_screener.py --category bstock
 ```
 
-> 💡 **评分标准**：关于 ⭐ 到 ⭐⭐⭐⭐⭐ 的详细评分标准、市场状态成因，请参考 [star_rating_guide.md](references/star_rating_guide.md) 说明文档。
+`bulk_screener.py` 现在是动态榜单兼容入口，只提供排名证据，不再把缺少宏观检查的 2/3 结果叫作“全绿”。
 
-## 我的几条规矩
+## 验证
 
-1. 跌了不割核心仓（BTC/SOL 这种），除非逻辑变了
-2. 涨超 5% 的不追
-3. CPI/FOMC 之前不开新仓
-4. 单笔最多投总资金的 10%
-5. 永远留 30% 现金
-6. 绝对服从“三点检查”的红绿灯判定，任何一项指标红了（🔴）就绝不自作聪明逆势加仓。
+```bash
+python -m unittest discover -s tests -v
+```
 
-## 🧠 踩坑日记 (Live Log)
+CI 会执行语法检查、单元测试和 skill frontmatter 验证。需要本地运行 `quick_validate.py` 时，请使用当前 Codex 安装中 `skill-creator/scripts/quick_validate.py` 的实际路径。联网测试只读取 Binance 公共接口，测试流程不会提交订单。
 
-记录血汗钱换来的教训，欢迎围观我交学费：
+## 隐私
 
-### 2026年7月16日：利好见光死，冲动接飞刀被教做人
-- **起因**：台积电财报利润暴增 77%！超级逆天利好！我一拍大腿觉得要起飞，嫌仓位小急着加仓。
-- **作死**：脚本明明亮了红灯（🔴 聪明钱在撤退，卖单墙堆得像长城），我脑子一热觉得“这次不一样”，强行撤了防守单，改市价去追高。
-- **结果**：美股开盘直接“Sell the News”砸盘，利好直接成了狗庄出货的掩护。DRAMB 从 $56 一路阴跌到 $54.2。浮亏虽然才 $4，但伤害性不高，侮辱性极强，老实了。
-- **教训**：别跟冷冰冰的数据过不去，指标红了就是狗庄在出货。以后只要亮红灯一律不准买，再冲动剁手！
-
-## 待改进
-
-- 资金流分析现在用 K 线估算，不够精确
-- 缺 Telegram 推送
-- 需要更多历史回测
-- 接入币安 Spot websocket 实时盯盘，减少 API 请求
-
-欢迎 Issue / PR 👋
-
----
-
-## ⚠️ 免责声明
-
-本项目仅供学习研究，不构成投资建议。炒币有风险，亏了别找我。
+`config.json`、`.state/`、`.cache/` 和 `user_profile.local.json` 已被忽略。不要把 API Key、账户余额、成本价、用户名路径或个人交易日志提交到 GitHub。
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-*用纪律交易，靠数据决策。半自动行稳致远。* 🎯
+MIT

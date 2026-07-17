@@ -1,137 +1,86 @@
-﻿# -*- coding: utf-8 -*-
-"""
-core/check_portfolio.py 鈥?Check current holdings, P&L, and open orders (Optimized)
-Usage: python core/check_portfolio.py
-"""
-import sys, io, json, time
-from pathlib import Path
+"""Inspect the private Binance Spot account using the portable config path."""
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+from __future__ import annotations
 
-import ccxt
+import argparse
+import json
+import sys
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "new222" / "config.json"
+from trader_runtime import create_exchange, iso_utc, state_dir, write_json_atomic
 
-# Tracked symbols to avoid requesting all 500+ Binance spot markets
-SYMBOLS = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "LINK/USDT", "DOGE/USDT",
-    "DRAMB/USDT", "NVDAB/USDT", "GOOGLB/USDT", "QQQ/USDT",
-    "BNB/USDT", "TRX/USDT", "XRP/USDT", "ZEC/USDT", "JST/USDT",
-    "MORPHO/USDT", "DASH/USDT", "RENDER/USDT", "SUI/USDT",
-    "MUB/USDT", "SNDKB/USDT"
-]
 
-def create_exchange():
-    """Create and configure Binance exchange client."""
-    cfg = json.load(open(CONFIG_PATH))
-    ex = ccxt.binance({
-        "apiKey": cfg["api_key"],
-        "secret": cfg["api_secret"],
-        "enableRateLimit": True,
-        "timeout": 30000,
-        "options": {
-            "defaultType": "spot",
-            "adjustForTimeDifference": True,
-            "recvWindow": 60000,
-            "fetchOpenOrders": {
-                "warnWithoutSymbol": False,
-            },
-        },
-    })
-    if cfg.get("proxy"):
-        ex.proxies = {"http": cfg["proxy"], "https": cfg["proxy"]}
-    st = ex.fetch_time()
-    lt = ex.milliseconds()
-    ex.options["timeDifference"] = lt - st
-    ex.load_markets()
-    return ex
-
-def check_portfolio():
-    """Fetch and display full portfolio status."""
-    ex = create_exchange()
-
-    # 1. Open orders (pending)
-    print("=" * 75)
-    print("  OPEN ORDERS (still waiting)")
-    print("=" * 75)
-    all_open = []
-    for sym in SYMBOLS:
-        try:
-            orders = ex.fetch_open_orders(sym)
-            all_open.extend(orders)
-            time.sleep(0.05)
-        except Exception:
-            pass
-
-    if not all_open:
-        print("  None! All orders filled or cancelled.")
-    else:
-        for o in all_open:
-            sym = o.get("symbol", "")
-            price = o.get("price", 0)
-            amount = o.get("amount", 0)
-            filled = o.get("filled", 0)
-            remaining = o.get("remaining", 0)
-            oid = o.get("id", "")
-            print(f"  {sym:<14} limit={price:<12} qty={amount:<12} filled={filled} remaining={remaining}  id={oid}")
-
-    # 2. Recently filled orders (last 48h)
-    print(f"\n{'='*75}")
-    print("  RECENTLY FILLED ORDERS (last 48h)")
-    print(f"{'='*75}")
-    since = ex.milliseconds() - 48 * 3600 * 1000
-    filled_orders = []
-    for sym in SYMBOLS:
-        try:
-            trades = ex.fetch_my_trades(sym, since=since)
-            for t in trades:
-                filled_orders.append(t)
-            time.sleep(0.05)
-        except Exception:
-            pass
-
-    if not filled_orders:
-        print("  No recent fills found.")
-    else:
-        filled_orders.sort(key=lambda x: x.get("timestamp", 0))
-        for t in filled_orders:
-            sym = t.get("symbol", "")
-            side = t.get("side", "")
-            price = float(t.get("price", 0))
-            amount = float(t.get("amount", 0))
-            cost = float(t.get("cost", 0))
-            dt = t.get("datetime", "")[:19]
-            print(f"  {dt}  {sym:<14} {side:<5} price={price:<12} qty={amount:<14} cost={cost:.4f} USDT")
-
-    # 3. Current holdings
-    print(f"\n{'='*75}")
-    print("  CURRENT HOLDINGS & VALUE")
-    print(f"{'='*75}")
-    bal = ex.fetch_balance()
+def build_portfolio(exchange) -> dict:
+    balance = exchange.fetch_balance()
+    open_orders = exchange.fetch_open_orders()
+    holdings = []
     total_value = 0.0
-    
-    usdt_free = float(bal.get("USDT", {}).get("free", 0) or 0)
-    usdt_locked = float(bal.get("USDT", {}).get("used", 0) or 0)
-    usdt_total = usdt_free + usdt_locked
+    for asset, raw_amount in (balance.get("total") or {}).items():
+        amount = float(raw_amount or 0)
+        if amount <= 0 or asset == "USDT":
+            continue
+        symbol = f"{asset}/USDT"
+        if symbol not in exchange.markets:
+            holdings.append({"asset": asset, "quantity": amount, "price": None, "value_usdt": None})
+            continue
+        try:
+            price = float(exchange.fetch_ticker(symbol)["last"])
+            value = amount * price
+            total_value += value
+            holdings.append({"asset": asset, "quantity": amount, "price": price, "value_usdt": value})
+        except Exception as exc:
+            holdings.append(
+                {"asset": asset, "quantity": amount, "price": None, "value_usdt": None, "error": str(exc)}
+            )
+    usdt = balance.get("USDT") or {}
+    usdt_free = float(usdt.get("free", 0) or 0)
+    usdt_used = float(usdt.get("used", 0) or 0)
+    return {
+        "fetched_at_utc": iso_utc(),
+        "holdings": holdings,
+        "open_orders": [
+            {
+                "id": str(order.get("id")),
+                "symbol": order.get("symbol"),
+                "side": order.get("side"),
+                "type": order.get("type"),
+                "price": order.get("price"),
+                "amount": order.get("amount"),
+                "filled": order.get("filled"),
+                "remaining": order.get("remaining"),
+            }
+            for order in open_orders
+        ],
+        "usdt": {"free": usdt_free, "locked": usdt_used, "total": usdt_free + usdt_used},
+        "spot_holdings_value_usdt": total_value,
+        "account_value_usdt": total_value + usdt_free + usdt_used,
+    }
 
-    for sym in SYMBOLS:
-        base = sym.split("/")[0]
-        amt = float(bal.get(base, {}).get("total", 0) or 0)
-        if amt > 1e-8:
-            try:
-                tk = ex.fetch_ticker(sym)
-                price = float(tk["last"])
-                value = amt * price
-                total_value += value
-                print(f"  {base:8s} qty={amt:<18.6f} price={price:<14,.4f} value={value:.4f} USDT")
-                time.sleep(0.05)
-            except Exception:
-                pass
 
-    print()
-    print(f"  USDT: free=${usdt_free:.2f} | locked(in orders)=${usdt_locked:.2f} | total=${usdt_total:.2f}")
-    print(f"  Spot holdings value: {total_value:.2f} USDT")
-    print(f"  Total account: ~{total_value + usdt_total:.2f} USDT")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check Binance Spot portfolio")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
+    try:
+        report = build_portfolio(create_exchange(private=True))
+    except Exception as exc:
+        print(f"PORTFOLIO_UNAVAILABLE: {exc}", file=sys.stderr)
+        return 2
+    output = state_dir() / "latest_portfolio.json"
+    write_json_atomic(output, report)
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(f"PORTFOLIO | fetched={report['fetched_at_utc']}")
+        for row in report["holdings"]:
+            value = "unpriced" if row["value_usdt"] is None else f"{row['value_usdt']:.2f} USDT"
+            print(f"{row['asset']:<10} qty={row['quantity']:<18.8g} value={value}")
+        print(
+            f"USDT free={report['usdt']['free']:.2f} locked={report['usdt']['locked']:.2f} | "
+            f"account~{report['account_value_usdt']:.2f} USDT"
+        )
+        print(f"Open orders: {len(report['open_orders'])} | Evidence: {output}")
+    return 0
+
 
 if __name__ == "__main__":
-    check_portfolio()
+    raise SystemExit(main())

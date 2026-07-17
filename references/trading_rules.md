@@ -105,7 +105,7 @@ Conservative: $1,776 × 0.06 = $106.56 per trade
 
 **Exception — Shield (Baseline DCA) mode only**: The weekly small-amount baseline DCA is exempt from this rule because its purpose is to guarantee minimum accumulation regardless of market conditions. This exemption applies ONLY to the Shield mode, never to the Booster (Spear) mode or any discretionary trade. See [baseline_booster_strategy.md](baseline_booster_strategy.md) for details.
 
-**Why it exists**: Hype and good news (like earnings beats or CPI drops) create FOMO. Our emotional brains tell us "it's guaranteed to pump, let's bypass the checklist just this once." It is almost always a trap. Smart Money order book depth and actual taker flow show what big money is *doing*, while news only shows what they want you to *think*.
+**Why it exists**: Hype and good news can create FOMO. Order-book depth and taker flow show market activity, not trader identity or intent, and news can be incomplete or stale. Use all three evidence classes and stop when any class is caution, blocked, or unknown.
 
 **The math**:
 - A major company reports blowout earnings → Retail buys at the open due to hype.

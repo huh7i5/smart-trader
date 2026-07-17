@@ -5,6 +5,8 @@ import datetime
 import sys
 import io
 
+from trader_runtime import load_config, proxy_dict
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 def fetch_yahoo_data(ticker: str, range_str: str = "5y") -> pd.DataFrame:
@@ -16,9 +18,7 @@ def fetch_yahoo_data(ticker: str, range_str: str = "5y") -> pd.DataFrame:
     
     # Use proxy if configured in our config.json
     try:
-        import json
-        cfg = json.load(open(r"d:\money\new222\config.json"))
-        proxies = {"http": cfg.get("proxy", ""), "https": cfg.get("proxy", "")} if cfg.get("proxy") else None
+        proxies = proxy_dict(load_config())
     except Exception:
         proxies = None
 
