@@ -91,15 +91,22 @@ def fetch_yahoo_equity(
     if not result:
         raise BacktestDataError(f"Yahoo returned no chart data for {ticker}")
     quote = result["indicators"]["quote"][0]
+    adjusted_values = ((result.get("indicators", {}).get("adjclose") or [{}])[0].get("adjclose") or [])
     records = []
     for index, timestamp in enumerate(result.get("timestamp", [])):
         values = {name: quote.get(name, [None] * (index + 1))[index] for name in ("open", "high", "low", "close", "volume")}
         if any(values[name] is None for name in ("open", "high", "low", "close")):
             continue
+        adjusted_close = adjusted_values[index] if index < len(adjusted_values) else None
+        adjustment = float(adjusted_close) / float(values["close"]) if adjusted_close not in (None, 0) else 1.0
         records.append(
             {
                 "date": pd.to_datetime(timestamp, unit="s", utc=True).normalize(),
-                **{name: float(value or 0.0) for name, value in values.items()},
+                "open": float(values["open"]) * adjustment,
+                "high": float(values["high"]) * adjustment,
+                "low": float(values["low"]) * adjustment,
+                "close": float(values["close"]) * adjustment,
+                "volume": float(values["volume"] or 0.0),
             }
         )
     return _validate_frame(pd.DataFrame(records), ticker)
