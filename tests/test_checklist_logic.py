@@ -32,6 +32,14 @@ class ChecklistLogicTests(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertIn("not ETF flow", result["limitations"])
 
+    def test_negative_trend_cannot_be_overridden_by_order_book_depth(self):
+        daily = [kline(100 - i, 105 - i, 95 - i, 100 - i, 10, 5) for i in range(7)]
+        depth = {"bids": [[100, 100]], "asks": [[101, 1]]}
+        result = smart_money_proxy(daily, depth)
+        self.assertGreater(result["visible_bid_ask_notional_ratio"], 1.0)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["status"], "caution")
+
     def test_missing_macro_evidence_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             with patch.dict(os.environ, {"CRYPTO_SMART_TRADER_STATE_DIR": temp}):
